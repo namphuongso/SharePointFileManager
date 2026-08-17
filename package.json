@@ -1,0 +1,20 @@
+{
+  "name": "sharepoint-file-manager",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Reusable React library for SharePoint file management via Microsoft Graph",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @namphuongso/sharepoint-file-manager-core && npm run build -w @namphuongso/sharepoint-file-manager",
+    "test": "npm run test -w @namphuongso/sharepoint-file-manager-core",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:example": "npm run dev -w @namphuongso/sharepoint-file-manager-example"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "license": "UNLICENSED"
+}
