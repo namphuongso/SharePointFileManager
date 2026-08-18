@@ -23,21 +23,54 @@ interface GraphListItem {
 
 const BUILTIN_COLUMN_NAMES = new Set([
   "ContentType",
+  "ContentTypeId",
   "FileLeafRef",
   "FileRef",
   "FileDirRef",
+  "File_x0020_Type",
+  "File_x0020_Size",
   "FSObjType",
   "Modified",
   "Created",
   "Author",
   "Editor",
-  "CheckoutUser",
-  "_UIVersionString",
-  "DocIcon",
-  "LinkFilename",
-  "LinkFilenameNoMenu",
+  "AuthorLookupId",
+  "EditorLookupId",
+  "Created_x0020_Date",
+  "Modified_x0020_By",
+  "_EditMenuTableStart",
+  "_EditMenuTableEnd",
+  "_CopySource",
+  "GUID",
+  "ID",
   "ItemChildCount",
   "FolderChildCount",
+  "UniqueId",
+  "DocIcon",
+  "_UIVersionString",
+  "_UIVersion",
+  "_Level",
+  "_IsCurrentVersion",
+  "_HasCopyDestinations",
+  "_ModerationStatus",
+  "_ModerationComments",
+  "_ComplianceFlags",
+  "_ComplianceTag",
+  "_ComplianceTagWrittenTime",
+  "_ComplianceTagUserId",
+  "_DisplayName",
+  "SelectTitle",
+  "SelectFilename",
+  "SelectPath",
+  "AppAuthor",
+  "AppEditor",
+  "Edit",
+  "ParentVersionStringLookupId",
+  "CheckoutUserId",
+  "CheckedOutUserId",
+  "CheckoutUser",
+  "LinkFilename",
+  "LinkFilenameNoMenu",
 ]);
 
 export function mapListColumn(column: GraphListColumn): ListColumn | undefined {
@@ -55,8 +88,7 @@ export function mapListColumn(column: GraphListColumn): ListColumn | undefined {
 
 export function isVisibleListColumn(column: ListColumn): boolean {
   if (column.hidden) return false;
-  if (BUILTIN_COLUMN_NAMES.has(column.name)) return false;
-  if (column.name.startsWith("_")) return false;
+  if (isSystemMetadataKey(column.name)) return false;
   return true;
 }
 
@@ -84,8 +116,7 @@ export function extractMetadataFromListItem(listItem?: GraphListItem): {
   const mapped = mapListItemFields("", listItem);
   const metadata: Record<string, string | number | boolean | null> = {};
   for (const [key, value] of Object.entries(mapped.fields)) {
-    if (BUILTIN_COLUMN_NAMES.has(key)) continue;
-    if (key.startsWith("_")) continue;
+    if (isSystemMetadataKey(key)) continue;
     metadata[key] = value;
   }
   return {
@@ -93,6 +124,18 @@ export function extractMetadataFromListItem(listItem?: GraphListItem): {
     contentType: listItem.contentType?.name,
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
   };
+}
+
+function isSystemMetadataKey(key: string): boolean {
+  const normalized = key.trim();
+  if (normalized.startsWith("@")) return true;
+  if (normalized.toLowerCase() === "id") return true;
+  if (BUILTIN_COLUMN_NAMES.has(key)) return true;
+  if (key.startsWith("_")) return true;
+  if (key.startsWith("OData__")) return true;
+  if (key.endsWith("LookupId")) return true;
+  if (key.endsWith("StringId")) return true;
+  return false;
 }
 
 function detectColumnType(column: GraphListColumn): string | undefined {

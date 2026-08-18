@@ -93,19 +93,27 @@ export function usePeopleSearch(query: string, enabled = true) {
   });
 }
 
-export function useFolderChildren(folderId: string | undefined) {
+export function useFolderChildren(folderId: string | undefined, expandListItem = false) {
   const { client } = useSharePoint();
   return useQuery({
-    queryKey: queryKeys.children(client.config.siteId, client.cacheScope, folderId ?? ""),
+    queryKey: queryKeys.children(
+      client.config.siteId,
+      client.cacheScope,
+      `${folderId ?? ""}:${expandListItem ? "expanded" : "basic"}`,
+    ),
     enabled: Boolean(folderId),
-    queryFn: ({ signal }) => client.folders.listChildren(folderId!, { signal }),
+    queryFn: ({ signal }) => client.folders.listChildren(folderId!, { signal, expandListItem }),
   });
 }
 
-export function useItem(itemId: string | undefined) {
+export function useItem(itemId: string | undefined, expandListItem = true) {
   const { client } = useSharePoint();
   return useQuery({
-    queryKey: queryKeys.item(client.config.siteId, client.cacheScope, itemId ?? ""),
+    queryKey: queryKeys.item(
+      client.config.siteId,
+      client.cacheScope,
+      `${itemId ?? ""}:${expandListItem ? "expanded" : "basic"}`,
+    ),
     enabled: Boolean(itemId),
     queryFn: ({ signal }) => client.folders.get(itemId!, signal),
   });

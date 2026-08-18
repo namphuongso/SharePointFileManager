@@ -143,13 +143,22 @@
   white-space: nowrap;
 }
 
+.spm-command-link.fui-Button {
+  border-radius: 16px;
+  min-height: 32px;
+  padding-inline: 10px;
+  border: 1px solid transparent;
+  font-weight: 500;
+}
+
 .spm-command-link:hover {
   background: var(--spm-hover);
 }
 
 .spm-command-link.active {
-  background: var(--spm-primary-light);
-  color: var(--spm-primary);
+  background: var(--spm-primary-light) !important;
+  color: var(--spm-primary) !important;
+  border-color: #8dc8f6;
 }
 
 .spm-command-link-icon {
@@ -607,7 +616,8 @@
 }
 
 .spm-file-table .fui-TableRow:hover .spm-row-action,
-.spm-file-table .spm-row-selected .spm-row-action {
+.spm-file-table .spm-row-selected .spm-row-action,
+.spm-file-table .fui-TableRow:focus-within .spm-row-action {
   opacity: 1;
 }
 
@@ -1052,30 +1062,38 @@
 
 /* Context menus stay compact and remain usable when opened near an edge. */
 .spm-context-menu {
-  width: 240px;
+  width: 260px;
   max-width: calc(100vw - 16px);
+  max-height: min(70vh, 520px);
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-block: 4px;
 }
 
-.spm-context-menu button {
-  min-height: 32px;
-  padding: 6px 12px;
-  border: 0;
-  background: transparent;
-  color: var(--spm-text);
-  cursor: pointer;
+.spm-context-menu .fui-MenuList {
+  min-width: 0;
+  overflow-x: hidden;
 }
 
-.spm-context-menu button:hover,
-.spm-context-menu button:focus-visible {
+.spm-context-menu .fui-MenuItem {
+  min-height: 34px;
+  border-radius: 2px;
+  font-size: 14px;
+}
+
+.spm-context-menu .fui-MenuItem:hover,
+.spm-context-menu .fui-MenuItem:focus-visible {
   background: var(--spm-hover);
-  outline: none;
 }
 
-.spm-context-menu button.spm-text-sp-danger:hover {
+.spm-context-menu .spm-context-menu-delete:hover,
+.spm-context-menu .spm-context-menu-delete:focus-visible {
   background: #fde7e9;
+}
+
+.spm-context-menu .fui-MenuDivider {
+  margin-block: 4px;
 }
 
 @media (max-width: 720px) {
@@ -1164,14 +1182,14 @@
 }
 
 .spm-library-header {
-  min-height: 64px;
-  padding: 12px 24px;
+  min-height: 58px;
+  padding: 10px 20px 8px;
   border-bottom: 0;
 }
 
 .spm-library-title {
-  font-size: 24px;
-  line-height: 32px;
+  font-size: 34px;
+  line-height: 38px;
   font-weight: 600;
   letter-spacing: 0;
 }
@@ -1181,8 +1199,8 @@
 }
 
 .spm-library-header-actions .fui-SearchBox {
-  width: min(32vw, 360px);
-  min-width: 240px;
+  width: min(30vw, 340px);
+  min-width: 220px;
   border-radius: var(--spm-radius-control);
 }
 
@@ -1193,8 +1211,8 @@
 }
 
 .spm-command-surface {
-  min-height: 96px;
-  padding: 4px 24px 8px;
+  min-height: 84px;
+  padding: 4px 20px 8px;
   border-bottom: 0;
   display: block;
 }
@@ -1207,19 +1225,21 @@
 }
 
 .spm-command-row {
-  min-height: 44px;
+  min-height: 40px;
 }
 
 .spm-view-row {
-  min-height: 48px;
-  gap: 12px;
+  min-height: 42px;
+  gap: 10px;
 }
 
 .spm-command-links {
   width: 100%;
-  min-height: 40px;
+  min-height: 36px;
   gap: 4px;
   order: 1;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .spm-command-end {
@@ -1241,8 +1261,8 @@
 }
 
 .spm-view-pill {
-  min-height: 36px;
-  padding: 0 12px;
+  min-height: 32px;
+  padding: 0 10px;
   border: 1px solid var(--spm-border);
   border-radius: var(--spm-radius-control);
   background: var(--spm-bg);
@@ -1262,10 +1282,10 @@
 }
 
 .spm-type-chip {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--spm-radius-control);
-  background: #f3f2f1;
+  background: #f8f8f8;
 }
 
 .spm-view-tools {
@@ -1273,16 +1293,21 @@
 }
 
 .spm-view-tools .fui-Button {
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 32px;
+  min-height: 32px;
   border: 1px solid var(--spm-border);
   border-radius: var(--spm-radius-control);
   background: var(--spm-bg);
 }
 
+.spm-view-tools .fui-Button[aria-pressed="true"] {
+  background: #e8f3fc;
+  border-color: #9cccf5;
+}
+
 .spm-breadcrumb-bar {
   margin-inline: 0;
-  padding: 8px 24px;
+  padding: 6px 20px;
   background: var(--spm-bg) !important;
   border-top: 1px solid var(--spm-border);
   min-width: 0;
@@ -1311,7 +1336,7 @@
 
 .spm-library-canvas {
   margin: 0;
-  padding: 0 24px 24px;
+  padding: 0 20px 20px;
   background: var(--spm-bg);
   border-radius: 0;
   box-shadow: none;
@@ -1340,15 +1365,15 @@
 }
 
 .spm-file-table .fui-TableHeaderCell {
-  height: 48px;
+  height: 42px;
   color: var(--spm-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .spm-file-table .fui-TableCell {
-  height: 52px;
-  padding-block: 8px;
+  height: 44px;
+  padding-block: 5px;
 }
 
 .spm-file-table .spm-name-cell {
@@ -1357,7 +1382,8 @@
 
 .spm-file-name-button {
   color: var(--spm-text);
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .spm-file-table .fui-TableRow:hover {
@@ -1369,7 +1395,36 @@
 }
 
 .spm-file-table.spm-density-compact .fui-TableCell {
-  height: 40px;
+  height: 34px;
+}
+
+.spm-file-table.spm-density-compact .fui-TableHeaderCell {
+  height: 34px;
+}
+
+.spm-details-pane {
+  width: 360px;
+  min-width: 320px;
+  padding-bottom: 10px;
+}
+
+.spm-details-pane .spm-flex-1 {
+  padding-top: 12px;
+}
+
+.spm-details-pane .spm-flex-1 > .spm-space-y-2 > .spm-rounded-sm {
+  border: 1px solid var(--spm-border);
+  background: #fafafa !important;
+}
+
+.spm-details-access-summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.spm-details-access-summary .fui-Text {
+  display: inline-block;
 }
 
 @media (max-width: 960px) {

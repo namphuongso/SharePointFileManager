@@ -18,6 +18,7 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import {
+  AddRegular,
   ArrowSortDownLinesRegular,
   ArrowSortUpLinesRegular,
   DismissRegular,
@@ -163,8 +164,14 @@ export function FileList({
             <TableHeaderCell key={column.id}>{column.displayName}</TableHeaderCell>
           ))}
           <TableHeaderCell style={{ width: 140 }}>
-            <Button appearance="transparent" size="small" onClick={onAddColumn}>
-              + {messages.addColumn}
+            <Button
+              appearance="subtle"
+              size="small"
+              icon={<AddRegular />}
+              aria-label={messages.addColumn}
+              onClick={onAddColumn}
+            >
+              {messages.addColumn}
             </Button>
           </TableHeaderCell>
         </TableRow>
@@ -248,7 +255,7 @@ export function FileList({
               ) : null}
               {listColumns.map((column) => (
                 <TableCell key={column.id}>
-                  {formatMetadataValue(item.metadata?.[column.name], messages)}
+                  {formatMetadataValue(item.metadata?.[column.name], column, messages, locale)}
                 </TableCell>
               ))}
               <TableCell>
@@ -271,7 +278,8 @@ export function FileList({
                     size="small"
                     icon={<MoreHorizontalRegular />}
                     className="spm-row-action"
-                    title={`${messages.properties}: ${item.name}`}
+                    title={`${messages.moreActions}: ${item.name}`}
+                    aria-label={`${messages.moreActions}: ${item.name}`}
                     onClick={(event) => {
                       event.stopPropagation();
                       onContextMenu(item, event.clientX, event.clientY);
@@ -502,9 +510,17 @@ export function FileGrid({
 
 function formatMetadataValue(
   value: string | number | boolean | null | undefined,
+  column: ListColumn,
   messages: Messages,
+  locale: string,
 ): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? messages.yes : messages.no;
+  if (column.type === "dateTime" && typeof value === "string") {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return new Intl.DateTimeFormat(locale, { dateStyle: "short" }).format(date);
+    }
+  }
   return String(value);
 }

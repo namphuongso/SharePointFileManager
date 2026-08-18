@@ -10,7 +10,6 @@ import {
   MenuPopover,
   MenuTrigger,
   SearchBox,
-  tokens,
 } from "@fluentui/react-components";
 import {
   AddRegular,
@@ -30,6 +29,7 @@ import {
   InfoRegular,
   MoreHorizontalRegular,
   RenameRegular,
+  SearchRegular,
   SettingsRegular,
   ShareRegular,
   TextBulletListTreeRegular,
@@ -100,7 +100,7 @@ export function CommandBar({
 }) {
   const hasSelection = selectedItems.length > 0;
   const canCreate = features.createFolder || features.createOfficeFile;
-  const createLabel = messages.uploadFiles === "Upload files" ? "Create or upload" : "Tạo hoặc tải lên";
+  const createLabel = messages.createOrUpload;
 
   return (
     <div className="spm-chrome">
@@ -185,6 +185,7 @@ export function CommandBar({
               ) : null}
               {features.globalSearch ? (
                 <CommandLink
+                  icon={<SearchRegular />}
                   onClick={() => onSearchScopeChange(searchScope === "library" ? "folder" : "library")}
                 >
                   {searchScope === "library" ? messages.searchScopeLibrary : messages.searchScopeFolder}
@@ -201,6 +202,7 @@ export function CommandBar({
               type="button"
               className="spm-view-pill active"
               aria-pressed
+              aria-label={messages.allDocuments}
             >
               {messages.allDocuments}
             </button>
@@ -227,16 +229,42 @@ export function CommandBar({
                 appearance={showColumnChooser ? "primary" : "subtle"}
                 icon={<ColumnTripleRegular />}
                 onClick={onToggleColumnChooser}
+                aria-pressed={showColumnChooser}
                 title={messages.columns}
               />
             ) : null}
             <>
-              <Button appearance={view === "list" ? "primary" : "subtle"} icon={<TextBulletListTreeRegular />} onClick={() => onViewChange("list")} title={messages.list} />
-              <Button appearance={view === "compact" ? "primary" : "subtle"} icon={<TextDensityRegular />} onClick={() => onViewChange("compact")} title={messages.compact} />
-              <Button appearance={view === "grid" ? "primary" : "subtle"} icon={<GridRegular />} onClick={() => onViewChange("grid")} title={messages.grid} />
+              <Button
+                appearance={view === "list" ? "primary" : "subtle"}
+                icon={<TextBulletListTreeRegular />}
+                aria-pressed={view === "list"}
+                onClick={() => onViewChange("list")}
+                title={messages.list}
+              />
+              <Button
+                appearance={view === "compact" ? "primary" : "subtle"}
+                icon={<TextDensityRegular />}
+                aria-pressed={view === "compact"}
+                onClick={() => onViewChange("compact")}
+                title={messages.compact}
+              />
+              <Button
+                appearance={view === "grid" ? "primary" : "subtle"}
+                icon={<GridRegular />}
+                aria-pressed={view === "grid"}
+                onClick={() => onViewChange("grid")}
+                title={messages.grid}
+              />
             </>
             {features.properties ? (
-              <Button appearance="subtle" icon={<InfoRegular />} onClick={onToggleDetails} className={detailsOpen ? "spm-tool-active" : undefined} title={messages.details}>
+              <Button
+                appearance="subtle"
+                icon={<InfoRegular />}
+                aria-pressed={detailsOpen}
+                onClick={onToggleDetails}
+                className={detailsOpen ? "spm-tool-active" : undefined}
+                title={messages.details}
+              >
                 <span className="spm-tool-label">{messages.details}</span>
               </Button>
             ) : null}
@@ -357,14 +385,16 @@ function CommandLink({
   active?: boolean;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      appearance="subtle"
+      size="medium"
       className={`spm-command-link ${active ? "active" : ""}`}
+      aria-pressed={active}
       onClick={onClick}
-      style={{ color: tokens.colorNeutralForeground1 }}
     >
       {icon ? <span className="spm-command-link-icon">{icon}</span> : null}
       {children}
-    </button>
+    </Button>
   );
 }

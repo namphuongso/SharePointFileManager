@@ -51,6 +51,7 @@ export function mapDriveItem(item: GraphDriveItem, fallbackDriveId?: string): Sh
   const isFolder = Boolean(item.folder);
   const listMeta = extractMetadataFromListItem(item.listItem);
   const sensitivityLabel = extractSensitivityLabel(item.listItem?.fields);
+  const checkoutInfo = extractCheckoutInfo(item.listItem?.fields);
   return {
     id: item.id,
     name: item.name,
@@ -77,7 +78,9 @@ export function mapDriveItem(item: GraphDriveItem, fallbackDriveId?: string): Sh
     metadata: listMeta.metadata,
     sensitivityLabel,
     capabilities: {
-      isCheckedOut: item.publication?.level?.toLowerCase() === "checkout",
+      isCheckedOut:
+        item.publication?.level?.toLowerCase() === "checkout" || checkoutInfo.isCheckedOut,
+      checkedOutBy: checkoutInfo.checkedOutBy,
     },
   };
 }
@@ -99,4 +102,33 @@ function extractSensitivityLabel(fields?: Record<string, unknown>): string | und
     }
   }
   return undefined;
+}
+
+function extractCheckoutInfo(fields?: Record<string, unknown>): {
+  isCheckedOut: boolean;
+  checkedOutBy?: UserInfo;
+} {
+  if (!fields) return { isCheckedOut: false };
+  const checkoutUser = fields.CheckoutUser;
+  const checkedOutUser = fields.CheckedOutUser;
+  const actor = parseLookupUser(checkoutUser) ?? parseLookupUser(checkedOutUser);
+  const isCheckedOut = Boolean(actor) || text(fields.CheckoutUserId) !== "" || text(fields.CheckedOutUserId) !== "";
+  return { isCheckedOut, checkedOutBy: actor };
+}
+
+function parseLookupUser(value: unknown): UserInfo | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as Record<string, unknown>;
+  const displayName =
+    text(record.LookupValue) || text(record.displayName) || text(record.Title);
+  const email = text(record.Email) || text(record.email);
+  const id = text(record.LookupId) || text(record.Id) || text(record.id);
+  if (!displayName && !email && !id) return undefined;
+  return { id: id || undefined, displayName: displayName || undefined, email: email || undefined };
+}
+
+function text(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return String(value);
+  return "";
 }

@@ -13,7 +13,10 @@ export class CheckoutService {
   async checkout(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {
     const driveId = await this.getDriveId();
     await this.graph.post(`${itemUrl(driveId, itemId)}/checkout`, undefined, { signal });
-    return this.enrichCheckout(await this.folders.get(itemId, signal), signal);
+    return this.enrichCheckout(
+      await this.folders.get(itemId, { signal, expandListItem: true }),
+      signal,
+    );
   }
 
   async checkin(itemId: string, comment?: string, signal?: AbortSignal): Promise<SharePointItem> {
@@ -23,13 +26,19 @@ export class CheckoutService {
       { comment: comment ?? "" },
       { signal },
     );
-    return this.enrichCheckout(await this.folders.get(itemId, signal), signal);
+    return this.enrichCheckout(
+      await this.folders.get(itemId, { signal, expandListItem: true }),
+      signal,
+    );
   }
 
   async discardCheckout(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {
     const driveId = await this.getDriveId();
     await this.graph.post(`${itemUrl(driveId, itemId)}/discardCheckout`, undefined, { signal });
-    return this.enrichCheckout(await this.folders.get(itemId, signal), signal);
+    return this.enrichCheckout(
+      await this.folders.get(itemId, { signal, expandListItem: true }),
+      signal,
+    );
   }
 
   async enrichCheckout(item: SharePointItem, signal?: AbortSignal): Promise<SharePointItem> {

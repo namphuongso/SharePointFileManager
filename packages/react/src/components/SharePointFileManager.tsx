@@ -135,6 +135,7 @@ function FileManagerShell({
   density: "compact" | "comfortable";
 }) {
   const { client, locale, messages } = useSharePoint();
+  const features = client.config.features;
   const notify = useNotify();
   const rootId = client.config.rootItemId;
   const quickAccessScope = `${client.config.siteId}:${rootId}`;
@@ -203,7 +204,10 @@ function FileManagerShell({
 
   const isSearching = query.trim().length >= 2;
   const useInfiniteListing = client.config.features.infiniteScroll && !isSearching;
-  const childrenQuery = useFolderChildren(useInfiniteListing ? undefined : currentFolderId);
+  const childrenQuery = useFolderChildren(
+    useInfiniteListing ? undefined : currentFolderId,
+    features.metadata,
+  );
   const infiniteChildrenQuery = useFolderChildrenInfinite(
     useInfiniteListing ? currentFolderId : undefined,
     client.config.features.metadata,
@@ -318,7 +322,7 @@ function FileManagerShell({
   const restoreVersion = useRestoreVersion(currentFolderId);
   const permissionsQuery = usePermissions(dialog?.type === "access" ? dialog.item.id : undefined);
   const versionsQuery = useVersions(dialog?.type === "versions" ? dialog.item.id : undefined, dialog?.type === "versions");
-  const propertiesQuery = useItem(dialog?.type === "properties" ? dialog.item.id : undefined);
+  const propertiesQuery = useItem(dialog?.type === "properties" ? dialog.item.id : undefined, true);
   const listItemFieldsQuery = useListItemFields(
     dialog?.type === "properties" ? dialog.item.id : undefined,
     dialog?.type === "properties",
@@ -331,8 +335,6 @@ function FileManagerShell({
     dialog?.type === "activity" ? dialog.item.id : undefined,
     dialog?.type === "activity",
   );
-
-  const features = client.config.features;
 
   function emitNotify(payload: NotifyPayload) {
     notify(payload);
@@ -689,6 +691,13 @@ function FileManagerShell({
   }
 
   const detailsItem = selectedItems.length === 1 ? selectedItems[0] : undefined;
+  const detailsPermissionsQuery = usePermissions(
+    detailsOpen && features.manageAccess && detailsItem ? detailsItem.id : undefined,
+  );
+  const detailsActivitiesQuery = useItemActivities(
+    detailsOpen && features.activityLog && detailsItem ? detailsItem.id : undefined,
+    detailsOpen && Boolean(detailsItem),
+  );
   const chromeTitle = crumbs.length > 1
     ? crumbs[crumbs.length - 1]?.name ?? title ?? messages.files
     : title || messages.files;
@@ -963,6 +972,16 @@ function FileManagerShell({
                   : undefined
               }
               onShare={features.share ? () => setDialog({ type: "share", item: detailsItem }) : undefined}
+              permissions={detailsPermissionsQuery.data}
+              permissionsLoading={detailsPermissionsQuery.isLoading}
+              activities={detailsActivitiesQuery.data}
+              activitiesLoading={detailsActivitiesQuery.isLoading}
+              onOpenManageAccess={
+                features.manageAccess ? () => setDialog({ type: "access", item: detailsItem }) : undefined
+              }
+              onOpenActivity={
+                features.activityLog ? () => setDialog({ type: "activity", item: detailsItem }) : undefined
+              }
             />
           ) : (
             <aside className="spm-details-pane">

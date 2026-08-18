@@ -275,7 +275,15 @@ export function PropertiesDialog({
     const next: Record<string, string> = {};
     for (const column of listColumns ?? []) {
       const value = listItemFields?.fields[column.name] ?? item?.metadata?.[column.name];
-      next[column.name] = value === null || value === undefined ? "" : String(value);
+      if (value === null || value === undefined) {
+        next[column.name] = "";
+        continue;
+      }
+      if (column.type === "dateTime" && typeof value === "string") {
+        next[column.name] = value.slice(0, 10);
+        continue;
+      }
+      next[column.name] = String(value);
     }
     setDraft(next);
   }, [open, item?.id, listColumns, listItemFields, item?.metadata]);
@@ -318,11 +326,9 @@ export function PropertiesDialog({
                 return (
                   <label key={column.id} className="spm-mb-2 spm-block spm-text-sm">
                     <span className="spm-mb-1 spm-block spm-text-sp-muted">{column.displayName}</span>
-                    <input
-                      className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-2 spm-py-1.5"
-                      value={value}
-                      onChange={(event) => setDraft((current) => ({ ...current, [column.name]: event.target.value }))}
-                    />
+                    {renderMetadataInput(column, value, (next) =>
+                      setDraft((current) => ({ ...current, [column.name]: next }))
+                    )}
                   </label>
                 );
               })}
@@ -334,7 +340,7 @@ export function PropertiesDialog({
                     const payload: Record<string, string | number | boolean | null> = {};
                     for (const column of editableColumns) {
                       const value = draft[column.name];
-                      payload[column.name] = value?.trim() ? value : null;
+                      payload[column.name] = parseDraftValue(column, value ?? "");
                     }
                     onSaveMetadata(payload);
                   }}
@@ -356,6 +362,67 @@ function PropertyRow({ label, value }: { label: string; value: string }) {
       <dt className="spm-w-28 spm-shrink-0 spm-text-sp-muted">{label}</dt>
       <dd className="spm-min-w-0 spm-break-all">{value}</dd>
     </div>
+  );
+}
+
+function parseDraftValue(column: ListColumn, value: string): string | number | boolean | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (column.type === "number") {
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  if (column.type === "boolean") {
+    if (trimmed.toLowerCase() === "true") return true;
+    if (trimmed.toLowerCase() === "false") return false;
+  }
+  return trimmed;
+}
+
+function renderMetadataInput(
+  column: ListColumn,
+  value: string,
+  onChange: (next: string) => void,
+) {
+  if (column.type === "boolean") {
+    return (
+      <select
+        className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-2 spm-py-1.5"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">—</option>
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+    );
+  }
+  if (column.type === "dateTime") {
+    return (
+      <input
+        type="date"
+        className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-2 spm-py-1.5"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    );
+  }
+  if (column.type === "number") {
+    return (
+      <input
+        type="number"
+        className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-2 spm-py-1.5"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    );
+  }
+  return (
+    <input
+      className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-2 spm-py-1.5"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
 

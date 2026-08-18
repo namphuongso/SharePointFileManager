@@ -11,7 +11,7 @@ export class FileService {
   ) {}
 
   get(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {
-    return this.folders.get(itemId, signal);
+    return this.folders.get(itemId, { signal, expandListItem: true });
   }
 
   getMetadata(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {

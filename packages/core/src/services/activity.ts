@@ -34,7 +34,7 @@ export class ActivityService {
 function mapActivity(raw: GraphDriveItemActivity): DriveItemActivity | undefined {
   if (!raw.id) return undefined;
   const actor = mapActor(raw.actor);
-  const actionName = raw.action ? Object.keys(raw.action)[0] : raw.access ? "access" : "activity";
+  const actionName = normalizeActionName(raw.action, raw.access);
   const itemName = raw.driveItem?.name;
   return {
     id: raw.id,
@@ -43,6 +43,27 @@ function mapActivity(raw: GraphDriveItemActivity): DriveItemActivity | undefined
     timestamp: raw.activityDateTime ?? raw.times?.recordedTime,
     description: itemName ? `${actionName} · ${itemName}` : actionName,
   };
+}
+
+function normalizeActionName(
+  action?: Record<string, unknown>,
+  access?: Record<string, unknown>,
+): string {
+  if (action) {
+    const key = Object.keys(action)[0];
+    if (key) {
+      if (key === "edit" || key === "update") return "edited";
+      if (key === "create") return "created";
+      if (key === "delete") return "deleted";
+      if (key === "move") return "moved";
+      if (key === "rename") return "renamed";
+      if (key === "share") return "shared";
+      if (key === "comment") return "commented";
+      return key;
+    }
+  }
+  if (access) return "accessed";
+  return "activity";
 }
 
 function mapActor(identity?: GraphIdentitySet): UserInfo | undefined {

@@ -3,6 +3,27 @@ import {
   type FeatureConfig,
   type SharePointItem,
 } from "@namphuongso/sharepoint-file-manager-core";
+import {
+  MenuDivider,
+  MenuItem,
+  MenuList,
+  tokens,
+} from "@fluentui/react-components";
+import {
+  ArrowDownloadRegular,
+  ArrowMoveRegular,
+  CopyRegular,
+  DeleteRegular,
+  DocumentRegular,
+  HistoryRegular,
+  InfoRegular,
+  LockClosedRegular,
+  LockOpenRegular,
+  OpenRegular,
+  PersonSettingsRegular,
+  RenameRegular,
+  ShareRegular,
+} from "@fluentui/react-icons";
 import type { Messages } from "../i18n/messages";
 
 export type FileAction =
@@ -70,6 +91,45 @@ function canShowAction(item: SharePointItem, action: FileAction): boolean {
 
 type MenuAction = { id: FileAction; label: string; show: boolean; dividerBefore?: boolean };
 
+function getActionIcon(action: FileAction) {
+  switch (action) {
+    case "open":
+      return <OpenRegular />;
+    case "openInSharePoint":
+      return <OpenRegular />;
+    case "download":
+      return <ArrowDownloadRegular />;
+    case "preview":
+      return <DocumentRegular />;
+    case "rename":
+      return <RenameRegular />;
+    case "copy":
+      return <CopyRegular />;
+    case "move":
+      return <ArrowMoveRegular />;
+    case "share":
+      return <ShareRegular />;
+    case "manageAccess":
+      return <PersonSettingsRegular />;
+    case "properties":
+      return <InfoRegular />;
+    case "checkout":
+      return <LockClosedRegular />;
+    case "checkin":
+      return <LockOpenRegular />;
+    case "discardCheckout":
+      return <LockOpenRegular />;
+    case "delete":
+      return <DeleteRegular />;
+    case "versionHistory":
+      return <HistoryRegular />;
+    case "activity":
+      return <HistoryRegular />;
+    default:
+      return undefined;
+  }
+}
+
 export function ContextMenu({
   item,
   x,
@@ -104,23 +164,28 @@ export function ContextMenu({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    const firstItem = ref.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    firstItem?.focus();
+  }, []);
+
   const actions: MenuAction[] = [
     { id: "open", label: messages.open, show: true },
+    { id: "share", label: messages.share, show: true },
     { id: "openInSharePoint", label: messages.openInSharePoint, show: Boolean(item.webUrl) },
-    { id: "preview", label: messages.preview, show: item.type === "file" },
     { id: "download", label: messages.download, show: item.type === "file" },
-    { id: "share", label: messages.share, show: true, dividerBefore: true },
+    { id: "delete", label: messages.delete, show: true, dividerBefore: true },
+    { id: "preview", label: messages.preview, show: item.type === "file" },
+    { id: "rename", label: messages.rename, show: true },
+    { id: "move", label: messages.move, show: true },
+    { id: "copy", label: messages.copy, show: true },
+    { id: "versionHistory", label: messages.versionHistory, show: item.type === "file" },
     { id: "manageAccess", label: messages.manageAccess, show: true },
+    { id: "properties", label: messages.properties, show: true, dividerBefore: true },
+    { id: "activity", label: messages.activity, show: true },
     { id: "checkout", label: messages.checkout, show: canShowAction(item, "checkout"), dividerBefore: true },
     { id: "checkin", label: messages.checkin, show: canShowAction(item, "checkin") },
     { id: "discardCheckout", label: messages.discardCheckout, show: canShowAction(item, "discardCheckout") },
-    { id: "rename", label: messages.rename, show: true, dividerBefore: true },
-    { id: "copy", label: messages.copy, show: true },
-    { id: "move", label: messages.move, show: true },
-    { id: "properties", label: messages.properties, show: true },
-    { id: "versionHistory", label: messages.versionHistory, show: item.type === "file" },
-    { id: "activity", label: messages.activity, show: true },
-    { id: "delete", label: messages.delete, show: true, dividerBefore: true },
   ];
 
   const visible = actions.filter(
@@ -141,24 +206,29 @@ export function ContextMenu({
       ref={ref}
       role="menu"
       aria-label={item.name}
+      tabIndex={-1}
       className="spm-context-menu spm-fixed spm-z-50 spm-rounded-sm spm-border spm-border-sp-border spm-bg-white spm-py-1 spm-shadow-lg"
       style={{ left, top, maxHeight: menuHeight }}
     >
-      {visible.map((action) => (
-        <div key={action.id}>
-          {action.dividerBefore ? <div className="spm-my-1 spm-border-t spm-border-sp-border" /> : null}
-          <button
-            type="button"
-            role="menuitem"
-            className={`spm-block spm-w-full spm-px-3 spm-py-1.5 spm-text-left spm-text-sm hover:spm-bg-sp-hover ${
-              action.id === "delete" ? "spm-text-sp-danger" : ""
-            }`}
-            onClick={() => onAction(action.id)}
-          >
-            {action.label}
-          </button>
-        </div>
-      ))}
+      <MenuList>
+        {visible.map((action) => (
+          <div key={action.id}>
+            {action.dividerBefore ? <MenuDivider /> : null}
+            <MenuItem
+              icon={getActionIcon(action.id)}
+              className={action.id === "delete" ? "spm-context-menu-delete" : undefined}
+              style={
+                action.id === "delete"
+                  ? { color: tokens.colorPaletteRedForeground1 }
+                  : undefined
+              }
+              onClick={() => onAction(action.id)}
+            >
+              {action.label}
+            </MenuItem>
+          </div>
+        ))}
+      </MenuList>
     </div>
   );
 }

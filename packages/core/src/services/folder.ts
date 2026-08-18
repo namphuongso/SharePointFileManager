@@ -10,9 +10,20 @@ export class FolderService {
     private readonly getDriveId: () => Promise<string>,
   ) {}
 
-  async get(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {
+  async get(
+    itemId: string,
+    options: { signal?: AbortSignal; expandListItem?: boolean } = {},
+  ): Promise<SharePointItem> {
     const driveId = await this.getDriveId();
-    const item = await this.graph.get<GraphDriveItem>(itemUrl(driveId, itemId), { signal });
+    const expand = buildExpandQuery(options.expandListItem);
+    const item = await this.graph.get<GraphDriveItem>(itemUrl(driveId, itemId), {
+      query: {
+        $select:
+          "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag",
+        ...(expand ? { $expand: expand } : {}),
+      },
+      signal: options.signal,
+    });
     return mapDriveItem(item, driveId);
   }
 
@@ -38,7 +49,9 @@ export class FolderService {
               $top: options.top ?? 200,
               $select:
                 "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag",
-              ...(options.expandListItem ? { $expand: "listItem($select=fields,contentType)" } : {}),
+              ...(buildExpandQuery(options.expandListItem)
+                ? { $expand: buildExpandQuery(options.expandListItem) }
+                : {}),
             },
         signal: options.signal,
       });
@@ -77,7 +90,9 @@ export class FolderService {
             $top: options.top ?? 50,
             $select:
               "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag",
-            ...(options.expandListItem ? { $expand: "listItem($select=fields,contentType)" } : {}),
+            ...(buildExpandQuery(options.expandListItem)
+              ? { $expand: buildExpandQuery(options.expandListItem) }
+              : {}),
           },
       signal: options.signal,
     });
@@ -176,6 +191,14 @@ export class FolderService {
     });
     return mapDriveItem(item, driveId);
   }
+}
+
+function buildExpandQuery(expandListItem?: boolean): string {
+  const parts = ["thumbnails($select=small,medium,large)"];
+  if (expandListItem) {
+    parts.push("listItem($select=id,contentType;$expand=fields)");
+  }
+  return parts.join(",");
 }
 
 async function waitForAsyncOperation(
