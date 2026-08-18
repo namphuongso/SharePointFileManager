@@ -28,7 +28,7 @@ Library không biết nghiệp vụ project.
 
 ## Features
 
-Mọi flag mặc định `true` trừ recycle bin (không có trong v1).
+Mọi flag đều ánh xạ các chức năng dựa trên endpoint Microsoft Graph `v1.0`.
 
 Action trên UI = feature flag AND kết quả Graph. 403 → permission denied.
 

@@ -4,6 +4,17 @@ export interface UserInfo {
   email?: string;
 }
 
+export type DirectoryPersonKind = "user" | "group" | "email";
+
+/** Person or group from Microsoft Graph people/directory search. */
+export interface DirectoryPerson {
+  key: string;
+  displayName: string;
+  email?: string;
+  objectId?: string;
+  kind: DirectoryPersonKind;
+}
+
 export type SharePointItemType = "file" | "folder";
 
 /**
@@ -28,11 +39,44 @@ export interface SharePointItem {
   downloadUrl?: string;
   thumbnailUrl?: string;
   canPreview?: boolean;
+  /** Checkout / lock hints from Graph publication or listItem fields. */
+  capabilities?: Partial<ItemCapabilities>;
+  listItemId?: string;
+  contentType?: string;
+  /** Custom SharePoint list column values keyed by internal column name. */
+  metadata?: Record<string, string | number | boolean | null>;
+  sensitivityLabel?: string;
 }
+
+export interface ItemCapabilities {
+  canRead?: boolean;
+  canRename: boolean;
+  canDelete: boolean;
+  canDownload: boolean;
+  canMove: boolean;
+  canCopy: boolean;
+  canShare: boolean;
+  canCheckout: boolean;
+  canCheckin: boolean;
+  canDiscardCheckout: boolean;
+  canManagePermissions?: boolean;
+  canViewVersions?: boolean;
+  canRestore?: boolean;
+  canPreview?: boolean;
+  isCheckedOut: boolean;
+  checkedOutByMe: boolean;
+  checkedOutBy?: UserInfo;
+}
+
+export type OfficeFileKind = "word" | "excel" | "powerpoint";
+
+export type SortField = "name" | "modified" | "size" | "created";
+export type SortDirection = "asc" | "desc";
 
 export interface PagedResult<T> {
   items: T[];
   nextLink?: string;
+  hasMore?: boolean;
 }
 
 export interface DriveInfo {
@@ -128,6 +172,8 @@ export interface UploadOptions {
   conflictBehavior?: ConflictBehavior;
   onProgress?: (progress: UploadProgress) => void;
   signal?: AbortSignal;
+  chunkSize?: number;
+  resume?: { uploadUrl: string; nextOffset?: number };
 }
 
 export interface UploadProgress {
@@ -141,13 +187,60 @@ export interface CopyMoveOptions {
   destinationParentId: string;
   newName?: string;
   signal?: AbortSignal;
+  onCopyProgress?: (progress: CopyOperationProgress) => void;
+}
+
+export type CopyOperationPhase = "starting" | "monitoring" | "completed" | "failed";
+
+export interface CopyOperationProgress {
+  phase: CopyOperationPhase;
+  /** 0–100 while monitoring async copy job. */
+  percent?: number;
+}
+
+export type SearchScope = "folder" | "library";
+
+export interface SearchFilters {
+  fileType?: string;
+  modifiedAfter?: string;
+  modifiedBefore?: string;
+  author?: string;
 }
 
 export interface SearchOptions {
   query: string;
+  scope?: SearchScope;
   folderId?: string;
+  filters?: SearchFilters;
   top?: number;
+  nextLink?: string;
+  /** Offset for Microsoft Search API library queries. */
+  from?: number;
   signal?: AbortSignal;
+}
+
+export interface ListColumn {
+  id: string;
+  name: string;
+  displayName: string;
+  readOnly: boolean;
+  hidden: boolean;
+  type?: string;
+}
+
+export interface ListItemFields {
+  itemId: string;
+  listItemId?: string;
+  contentType?: string;
+  fields: Record<string, string | number | boolean | null>;
+}
+
+export interface DriveItemActivity {
+  id: string;
+  action?: string;
+  actor?: UserInfo;
+  timestamp?: string;
+  description?: string;
 }
 
 export interface FeatureConfig {
@@ -164,6 +257,26 @@ export interface FeatureConfig {
   preview?: boolean;
   versionHistory?: boolean;
   openInSharePoint?: boolean;
+  properties?: boolean;
+  checkout?: boolean;
+  createOfficeFile?: boolean;
+  globalSearch?: boolean;
+  metadata?: boolean;
+  activityLog?: boolean;
+  infiniteScroll?: boolean;
+  dragDropMove?: boolean;
+  bulkMetadata?: boolean;
+  copyProgress?: boolean;
+  enableDeltaSync?: boolean;
+  enableAnalytics?: boolean;
+  enableActivities?: boolean;
+}
+
+export type NotifyType = "success" | "error" | "info";
+
+export interface NotifyPayload {
+  type: NotifyType;
+  message: string;
 }
 
 export interface SharePointConfig {

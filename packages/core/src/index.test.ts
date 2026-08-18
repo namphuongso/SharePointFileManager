@@ -3,11 +3,15 @@ import { mapGraphError, mapStatusToCode } from "./errors/map-graph-error";
 import { SharePointErrorCode } from "./errors/sharepoint-error";
 import { GraphClient } from "./graph/client";
 import { mapDriveItem } from "./mappers/item";
+import { mapGraphPerson, mapGraphUser, mapTypedEmail, toInviteRecipient } from "./mappers/person";
 import { mapPermission } from "./mappers/permission";
 import { resolveConfig } from "./config/resolve-config";
 import { DriveService, findDriveByName } from "./services/drive";
 import { SiteService } from "./services/site";
 import { siteResourcePath } from "./graph/paths";
+import { buildSearchKql } from "./services/search";
+import { ActivityService } from "./services/activity";
+import { DeltaService } from "./services/delta";
 
 describe("mapStatusToCode", () => {
   it("maps HTTP statuses", () => {
@@ -61,6 +65,20 @@ describe("mapDriveItem", () => {
     expect(item.type).toBe("folder");
     expect(item.childCount).toBe(3);
   });
+
+  it("maps sensitivity label from list item fields", () => {
+    const item = mapDriveItem({
+      id: "3",
+      name: "secret.docx",
+      file: { mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+      listItem: {
+        fields: {
+          _ComplianceTag: "Confidential",
+        },
+      },
+    });
+    expect(item.sensitivityLabel).toBe("Confidential");
+  });
 });
 
 describe("mapPermission", () => {
@@ -88,6 +106,37 @@ describe("mapPermission", () => {
   });
 });
 
+describe("people mapper", () => {
+  it("maps Graph people search results without using people-id as objectId", () => {
+    const person = mapGraphPerson({
+      id: "people-row-id",
+      displayName: "Test 02",
+      scoredEmailAddresses: [{ address: "test02@tcs.com.vn" }],
+      personType: { class: "Person", subclass: "OrganizationUser" },
+    });
+    expect(person?.kind).toBe("user");
+    expect(person?.email).toBe("test02@tcs.com.vn");
+    expect(person?.objectId).toBeUndefined();
+  });
+
+  it("maps directory users with Azure AD object id", () => {
+    const person = mapGraphUser({
+      id: "aad-guid",
+      displayName: "Test 02",
+      mail: "test02@tcs.com.vn",
+    });
+    expect(person?.objectId).toBe("aad-guid");
+    expect(toInviteRecipient(person!)?.objectId).toBe("aad-guid");
+  });
+
+  it("maps a typed email for external sharing", () => {
+    const person = mapTypedEmail("omar_cou@hotmail.com");
+    expect(person?.kind).toBe("email");
+    expect(toInviteRecipient(person!)?.email).toBe("omar_cou@hotmail.com");
+    expect(mapTypedEmail("not-an-email")).toBeUndefined();
+  });
+});
+
 describe("resolveConfig", () => {
   it("fills defaults", () => {
     const config = resolveConfig({
@@ -101,6 +150,17 @@ describe("resolveConfig", () => {
 });
 
 describe("GraphClient", () => {
+  it("builds versioned URLs with the configured API version", () => {
+    const graph = new GraphClient({
+      baseUrl: "https://graph.microsoft.com/v1.0",
+      tokenProvider: { getAccessToken: async () => "token" },
+      scopes: ["Files.Read"],
+    });
+    expect(graph.apiUrl("/sites/site/drives")).toBe(
+      "https://graph.microsoft.com/v1.0/sites/site/drives",
+    );
+  });
+
   it("retries once on 401 with forceRefresh", async () => {
     const getAccessToken = vi.fn(async ({ forceRefresh }: { forceRefresh?: boolean }) => {
       return forceRefresh ? "new-token" : "old-token";
@@ -128,6 +188,59 @@ describe("GraphClient", () => {
     expect(getAccessToken).toHaveBeenCalledTimes(2);
     expect(getAccessToken.mock.calls[1]?.[0]).toMatchObject({ forceRefresh: true });
   });
+});
+
+describe("Graph-backed contracts", () => {
+  it("uses documented managed properties for library search filters", () => {
+    expect(buildSearchKql("budget", "https://contoso.sharepoint.com/sites/demo/Shared%20Documents", {
+      modifiedAfter: "2025-01-01",
+      modifiedBefore: "2025-12-31",
+    })).toContain("LastModifiedTime>=2025-01-01");
+  });
+
+  it("maps v1 activity facets and timestamps", async () => {
+    const fetchImpl = vi.fn(async (_url: string) => new Response(JSON.stringify({
+      value: [{
+        id: "a1",
+        action: { edit: {} },
+        activityDateTime: "2025-01-01T00:00:00Z",
+        actor: { user: { id: "u1", displayName: "Ada" } },
+        driveItem: { name: "plan.docx" },
+      }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const graph = new GraphClient({
+      baseUrl: "https://graph.microsoft.com/v1.0",
+      tokenProvider: { getAccessToken: async () => "token" },
+      scopes: ["Files.Read"],
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    const activities = await new ActivityService(graph, async () => "drive").list("item");
+    expect(activities[0]).toMatchObject({ id: "a1", action: "edit", timestamp: "2025-01-01T00:00:00Z" });
+    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("/drives/drive/items/item/activities");
+  });
+
+  it("restarts a delta sync when Graph invalidates a saved token", async () => {
+    let calls = 0;
+    const fetchImpl = vi.fn(async (url: string) => {
+      calls += 1;
+      if (calls === 1) return new Response(JSON.stringify({ error: { code: "resyncRequired" } }), { status: 410 });
+      expect(url).toContain("/drives/drive/root/delta");
+      return new Response(JSON.stringify({ value: [], "@odata.deltaLink": "https://delta/new" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    const graph = new GraphClient({
+      baseUrl: "https://graph.microsoft.com/v1.0",
+      tokenProvider: { getAccessToken: async () => "token" },
+      scopes: ["Files.Read"],
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    const result = await new DeltaService(graph).sync("drive", "root", { deltaLink: "https://delta/expired" });
+    expect(result.deltaLink).toBe("https://delta/new");
+    expect(calls).toBe(2);
+  });
+
 });
 
 describe("findDriveByName", () => {

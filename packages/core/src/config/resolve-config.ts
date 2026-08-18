@@ -19,6 +19,19 @@ export const DEFAULT_FEATURES: Required<FeatureConfig> = {
   preview: true,
   versionHistory: true,
   openInSharePoint: true,
+  properties: true,
+  checkout: true,
+  createOfficeFile: true,
+  globalSearch: true,
+  metadata: true,
+  activityLog: true,
+  infiniteScroll: true,
+  dragDropMove: true,
+  bulkMetadata: true,
+  copyProgress: true,
+  enableDeltaSync: false,
+  enableAnalytics: false,
+  enableActivities: true,
 };
 
 export function resolveConfig(config: SharePointConfig): ResolvedSharePointConfig {

@@ -15,6 +15,7 @@ export interface GraphRequestOptions {
   skipAuth?: boolean;
   /** Treat this URL as absolute instead of graphBaseUrl + path. */
   absoluteUrl?: boolean;
+  timeoutMs?: number;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -28,6 +29,12 @@ export class GraphClient {
       fetchImpl?: typeof fetch;
     },
   ) {}
+
+  /** Build an endpoint against the configured Graph cloud v1.0 API. */
+  apiUrl(path: string): string {
+    const configuredBase = this.options.baseUrl.replace(/\/v1\.0\/?$/i, "");
+    return joinUrl(`${configuredBase}/v1.0`, path);
+  }
 
   async request<T>(options: GraphRequestOptions): Promise<T> {
     const fetchImpl = this.options.fetchImpl ?? fetch;
@@ -70,9 +77,19 @@ export class GraphClient {
       }
 
       let response: Response;
+      const timeout = options.timeoutMs && options.timeoutMs > 0 ? new AbortController() : undefined;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      if (timeout) {
+        timeoutId = setTimeout(() => timeout.abort(), options.timeoutMs);
+      }
       try {
-        response = await fetchImpl(url, init);
+        const signal = timeout ? combineSignals(options.signal, timeout.signal) : options.signal;
+        response = await fetchImpl(url, { ...init, signal });
       } catch (error) {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (timeout?.signal.aborted && !options.signal?.aborted) {
+          throw new SharePointError({ code: SharePointErrorCode.NetworkError, message: "Graph request timed out", cause: error });
+        }
         if (options.signal?.aborted) {
           throw new SharePointError({
             code: SharePointErrorCode.Cancelled,
@@ -86,6 +103,7 @@ export class GraphClient {
           cause: error,
         });
       }
+      if (timeoutId) clearTimeout(timeoutId);
 
       if (response.status === 401 && !unauthorizedRetried && !options.skipAuth) {
         unauthorizedRetried = true;
@@ -157,6 +175,18 @@ export class GraphClient {
     const qs = params.toString();
     return qs ? `${base}?${qs}` : base;
   }
+}
+
+function combineSignals(first?: AbortSignal, second?: AbortSignal): AbortSignal | undefined {
+  if (!first) return second;
+  if (typeof AbortSignal !== "undefined" && "any" in AbortSignal) {
+    return (AbortSignal as typeof AbortSignal & { any(signals: AbortSignal[]): AbortSignal }).any([first, second!]);
+  }
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  first.addEventListener("abort", abort, { once: true });
+  second?.addEventListener("abort", abort, { once: true });
+  return controller.signal;
 }
 
 function joinUrl(base: string, path: string): string {

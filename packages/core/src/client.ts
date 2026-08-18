@@ -6,10 +6,15 @@ import { DriveService, findDriveByName } from "./services/drive";
 import { SiteService } from "./services/site";
 import { FileService } from "./services/file";
 import { FolderService } from "./services/folder";
+import { PeopleService } from "./services/people";
 import { PermissionService, SharingService } from "./services/sharing";
 import { SearchService } from "./services/search";
+import { CheckoutService } from "./services/checkout";
 import { UploadService } from "./services/upload";
-import type { ResolvedSharePointConfig, SharePointConfig } from "./types/models";
+import { ListItemService } from "./services/list-item";
+import { ActivityService } from "./services/activity";
+import { DeltaService } from "./services/delta";
+import type { OfficeFileKind, ResolvedSharePointConfig, SharePointConfig, SharePointItem } from "./types/models";
 
 export class SharePointClient {
   readonly config: ResolvedSharePointConfig;
@@ -22,6 +27,14 @@ export class SharePointClient {
   readonly sharing: SharingService;
   readonly permissions: PermissionService;
   readonly search: SearchService;
+  readonly people: PeopleService;
+  readonly checkout: CheckoutService;
+  readonly listItems: ListItemService;
+  readonly activities: ActivityService;
+  readonly delta: DeltaService;
+  /** Spec-aligned aliases retained alongside the original service names. */
+  readonly driveItems: FolderService;
+  readonly lists: ListItemService;
 
   private driveIdPromise?: Promise<string>;
 
@@ -41,6 +54,18 @@ export class SharePointClient {
     this.sharing = new SharingService(this.graph, () => this.getDriveId());
     this.permissions = new PermissionService(this.graph, () => this.getDriveId());
     this.search = new SearchService(this.graph, () => this.getDriveId(), this.config.rootItemId);
+    this.people = new PeopleService(this.graph);
+    this.checkout = new CheckoutService(this.graph, () => this.getDriveId(), this.folders);
+    this.listItems = new ListItemService(
+      this.graph,
+      this.config.siteId,
+      () => this.getDriveId(),
+      this.config.listId,
+    );
+    this.activities = new ActivityService(this.graph, () => this.getDriveId());
+    this.delta = new DeltaService(this.graph);
+    this.driveItems = this.folders;
+    this.lists = this.listItems;
   }
 
   get tokenProvider(): TokenProvider {
@@ -76,5 +101,19 @@ export class SharePointClient {
     }
 
     return (await this.drives.getDefaultDrive()).id;
+  }
+
+  /** Create an empty Office file placeholder (SharePoint opens it in Office Online). */
+  async createOfficeFile(
+    parentId: string,
+    kind: OfficeFileKind,
+    signal?: AbortSignal,
+  ): Promise<SharePointItem> {
+    const names: Record<OfficeFileKind, string> = {
+      word: "Document.docx",
+      excel: "Workbook.xlsx",
+      powerpoint: "Presentation.pptx",
+    };
+    return this.upload.createPlaceholder(parentId, names[kind], signal);
   }
 }

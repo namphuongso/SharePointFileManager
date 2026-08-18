@@ -4,6 +4,8 @@ Library không giả định Graph làm được mọi thứ SharePoint web UI l
 
 Base: `https://graph.microsoft.com/v1.0`
 
+Các hợp đồng được đối chiếu với tài liệu Microsoft Learn hiện hành: [DriveItem upload](https://learn.microsoft.com/en-us/graph/api/driveitem-put-content?view=graph-rest-1.0), [upload session](https://learn.microsoft.com/en-us/graph/api/driveitem-createuploadsession?view=graph-rest-1.0), [copy](https://learn.microsoft.com/en-us/graph/api/driveitem-copy?view=graph-rest-1.0), [permissions](https://learn.microsoft.com/en-us/graph/api/permission-update?view=graph-rest-1.0), [activities](https://learn.microsoft.com/en-us/graph/api/itemactivity-list?view=graph-rest-1.0), [delta](https://learn.microsoft.com/en-us/graph/api/driveitem-delta?view=graph-rest-1.0), và [search files](https://learn.microsoft.com/en-us/graph/search-concept-files).
+
 ## Drive / items
 
 | Việc | Method | Path |
@@ -36,6 +38,9 @@ Copy/move **không** download rồi upload lại.
 | List permissions | GET | `.../permissions` |
 | Update roles | PATCH | `.../permissions/{id}` |
 | Remove | DELETE | `.../permissions/{id}` |
+| People picker | GET | `/me/people?$search=` |
+| Directory users | GET | `/users?$search=` (`ConsistencyLevel: eventual`) |
+| Directory groups | GET | `/groups?$filter=startswith(displayName,'...')` |
 
 ### Hạn chế
 
@@ -44,10 +49,6 @@ Copy/move **không** download rồi upload lại.
 - `anonymous` / Anyone có thể bị tenant policy chặn → Graph 403; UI hiện lỗi, không giả định mọi tenant bật Anyone.
 - Expiration chủ yếu áp dụng sharing link trên SharePoint/OneDrive for Business.
 - Không phải mọi permission đều PATCH/DELETE được dù SharePoint UI có nút tương ứng.
-
-## Recycle bin
-
-Không có trong v1. List recycle bin Graph vẫn chủ yếu beta.
 
 ## Error mapping
 

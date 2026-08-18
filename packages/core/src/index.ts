@@ -9,6 +9,7 @@ export { SharePointError, SharePointErrorCode, isSharePointError } from "./error
 export { mapGraphError, mapStatusToCode } from "./errors/map-graph-error";
 export { mapDriveItem } from "./mappers/item";
 export { mapPermission } from "./mappers/permission";
+export { mapGraphPerson, mapGraphUser, mapGraphGroup, mapTypedEmail, toInviteRecipient } from "./mappers/person";
 
 export { DriveService, findDriveByName, mapGraphDrive } from "./services/drive";
 export { SiteService, siteIdentifierFromUrl, findListByName, isVisibleSharePointList } from "./services/site";
@@ -16,7 +17,15 @@ export { FileService } from "./services/file";
 export { FolderService } from "./services/folder";
 export { UploadService } from "./services/upload";
 export { SharingService, PermissionService } from "./services/sharing";
-export { SearchService } from "./services/search";
+export { SearchService, buildSearchKql, decodeLibraryPage } from "./services/search";
+export { PeopleService } from "./services/people";
+export { CheckoutService } from "./services/checkout";
+export { ListItemService } from "./services/list-item";
+export { ActivityService } from "./services/activity";
+export { DeltaService } from "./services/delta";
+export { MemoryCacheProvider } from "./cache/cache";
+export type { CacheProvider } from "./cache/cache";
+export { isVisibleListColumn, mapListColumn } from "./mappers/list-item";
 
 export type {
   SharePointConfig,
@@ -29,6 +38,8 @@ export type {
   SiteInfo,
   SharePointListInfo,
   UserInfo,
+  DirectoryPerson,
+  DirectoryPersonKind,
   ConflictBehavior,
   ShareRole,
   ShareLinkType,
@@ -44,5 +55,18 @@ export type {
   UploadOptions,
   UploadProgress,
   CopyMoveOptions,
+  CopyOperationProgress,
+  CopyOperationPhase,
+  NotifyPayload,
+  NotifyType,
   SearchOptions,
+  SearchScope,
+  SearchFilters,
+  ListColumn,
+  ListItemFields,
+  DriveItemActivity,
+  ItemCapabilities,
+  OfficeFileKind,
+  SortField,
+  SortDirection,
 } from "./types/models";

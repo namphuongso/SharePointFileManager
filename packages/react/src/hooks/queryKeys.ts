@@ -10,4 +10,12 @@ export const queryKeys = {
   versions: (siteId: string, drive: string, itemId: string) =>
     ["sp", siteId, drive, "versions", itemId] as const,
   search: (siteId: string, drive: string, query: string) => ["sp", siteId, drive, "search", query] as const,
+  childrenInfinite: (siteId: string, drive: string, folderId: string, expandListItem: boolean) =>
+    ["sp", siteId, drive, "children-infinite", folderId, expandListItem] as const,
+  listColumns: (siteId: string, drive: string) => ["sp", siteId, drive, "list-columns"] as const,
+  listItemFields: (siteId: string, drive: string, itemId: string) =>
+    ["sp", siteId, drive, "list-item-fields", itemId] as const,
+  activities: (siteId: string, drive: string, itemId: string) =>
+    ["sp", siteId, drive, "activities", itemId] as const,
+  people: (query: string) => ["sp", "people", query] as const,
 };

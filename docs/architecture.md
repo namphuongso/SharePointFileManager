@@ -26,7 +26,7 @@ SharePoint Online
 | Package | Publish | Vai trò |
 |---|---|---|
 | `packages/core` | private workspace | TokenProvider, Graph client, domain model, services |
-| `packages/react` | `@namphuongso/sharepoint-file-manager` | UI + hooks; bundle core vào dist |
+| `packages/react` | `@namphuongso/sharepoint-file-manager` | UI + hooks; giữ core là dependency external để bundle browser không kéo nhánh Node vào client |
 
 React components không `fetch` Graph. Mọi request đi qua `GraphClient`.
 
@@ -50,7 +50,6 @@ Class prefix `spm-`. Host import `styles.css` đã compile. Không bắt host sc
 
 ## Ngoài v1
 
-- Recycle bin UI
 - Theme package riêng
 - Library tự MSAL login
 - Retention, sensitivity labels, check-in/out
