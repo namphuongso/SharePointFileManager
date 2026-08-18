@@ -49,6 +49,7 @@ Trên App Registration **hiện có** của project (SPA), thêm delegated permi
 
 - `Files.ReadWrite`
 - `Sites.ReadWrite.All` (cần cho share/manage access trên document library)
+- `People.Read`, `User.Read.All`, `Directory.Read.All` (people picker khi share)
 
 Admin consent. Nên đưa Graph scopes vào `loginRequest` của MSAL để tránh consent lần hai.
 

@@ -4,7 +4,7 @@ import { createMsalTokenProvider, SharePointFileManager } from "@namphuongso/sha
 import { useMemo } from "react";
 import "@namphuongso/sharepoint-file-manager/styles.css";
 
-const graphScopes = ["Files.ReadWrite", "Sites.ReadWrite.All"];
+const graphScopes = ["Files.ReadWrite", "Sites.ReadWrite.All", "User.Read.All", "People.Read", "Directory.Read.All"];
 
 export function App() {
   const { instance, accounts, inProgress } = useMsal();
@@ -18,7 +18,7 @@ export function App() {
 
   if (!account) {
     return (
-      <main style={{ padding: 24 }}>
+      <main style={{ minHeight: "100vh", background: "#f5f5f5" }}>
         <h1>SharePoint File Manager</h1>
         <button
           type="button"
@@ -45,7 +45,7 @@ export function App() {
   );
 
   return (
-    <main style={{ padding: 24 }}>
+    <main style={{ minHeight: "100vh", background: "#f5f5f5" }}>
       <div style={{ marginBottom: 12 }}>
         Signed in as {account.username}{" "}
         <button type="button" onClick={() => instance.logoutRedirect()}>

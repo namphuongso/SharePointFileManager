@@ -8,6 +8,13 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   splitting: false,
-  external: ["react", "react-dom", "@tanstack/react-query", "@azure/msal-browser"],
-  noExternal: ["@namphuongso/sharepoint-file-manager-core"],
+  external: [
+    "react",
+    "react-dom",
+    "@tanstack/react-query",
+    "@azure/msal-browser",
+    "@fluentui/react-components",
+    "@fluentui/react-icons",
+    "@namphuongso/sharepoint-file-manager-core",
+  ],
 });

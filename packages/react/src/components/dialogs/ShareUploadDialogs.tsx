@@ -1,6 +1,14 @@
-import { useState } from "react";
-import type { SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
+import { useEffect, useState } from "react";
+import {
+  toInviteRecipient,
+  type ConflictBehavior,
+  type DirectoryPerson,
+  type InviteRecipient,
+  type SharePointItem,
+} from "@namphuongso/sharepoint-file-manager-core";
 import type { Messages } from "../../i18n/messages";
+import { Checkbox, Field, Input, ProgressBar, Select, Textarea } from "@fluentui/react-components";
+import { PeoplePicker } from "../PeoplePicker";
 import { Button, Dialog } from "../ui";
 
 export function UploadDialog({
@@ -10,35 +18,64 @@ export function UploadDialog({
   pending,
   onClose,
   onUpload,
+  onCancel,
 }: {
   open: boolean;
   messages: Messages;
   progress?: number;
   pending: boolean;
   onClose: () => void;
-  onUpload: (files: FileList) => void;
+  onUpload: (files: FileList, conflictBehavior: ConflictBehavior) => void;
+  onCancel?: () => void;
 }) {
+  const [conflictBehavior, setConflictBehavior] = useState<ConflictBehavior>("rename");
+
+  useEffect(() => {
+    if (!open) setConflictBehavior("rename");
+  }, [open]);
+
   return (
     <Dialog
       open={open}
       title={messages.upload}
       onClose={onClose}
-      footer={<Button onClick={onClose}>{messages.cancel}</Button>}
+      footer={
+        <>
+          {pending && onCancel ? <Button onClick={onCancel}>{messages.cancelUpload}</Button> : null}
+          <Button onClick={onClose}>{messages.cancel}</Button>
+        </>
+      }
     >
-      <input
-        type="file"
-        multiple
-        disabled={pending}
-        onChange={(event) => {
-          if (event.target.files?.length) onUpload(event.target.files);
-        }}
-      />
+      <div className="spm-space-y-4">
+        <Field label={messages.uploadConflict}>
+          <Select
+            value={conflictBehavior}
+            disabled={pending}
+            onChange={(event) => setConflictBehavior(event.target.value as ConflictBehavior)}
+          >
+            <option value="rename">{messages.conflictRename}</option>
+            <option value="replace">{messages.conflictReplace}</option>
+            <option value="fail">{messages.conflictFail}</option>
+          </Select>
+        </Field>
+        <label className="spm-upload-dropzone">
+          <span>{messages.uploadFiles}</span>
+          <input
+            type="file"
+            multiple
+            disabled={pending}
+            onChange={(event) => {
+              if (event.target.files?.length) onUpload(event.target.files, conflictBehavior);
+            }}
+          />
+        </label>
+      </div>
       {pending ? (
-        <div className="spm-mt-3">
-          <div className="spm-text-sm">{messages.uploading}</div>
-          <div className="spm-mt-1 spm-h-2 spm-w-full spm-rounded spm-bg-slate-100">
-            <div className="spm-h-2 spm-rounded spm-bg-sp-primary" style={{ width: `${progress ?? 0}%` }} />
+        <div className="spm-mt-4 spm-space-y-2">
+          <div className="spm-flex spm-justify-between spm-text-sm">
+            <span>{messages.uploading}</span><span>{Math.round(progress ?? 0)}%</span>
           </div>
+          <ProgressBar value={(progress ?? 0) / 100} />
         </div>
       ) : null}
     </Dialog>
@@ -51,6 +88,7 @@ export function ShareDialog({
   messages,
   pending,
   error,
+  createdLinkUrl,
   onClose,
   onInvite,
   onCreateLink,
@@ -60,11 +98,12 @@ export function ShareDialog({
   messages: Messages;
   pending: boolean;
   error?: string;
+  createdLinkUrl?: string;
   onClose: () => void;
-  onInvite: (email: string, role: "read" | "write", message: string, notify: boolean) => void;
+  onInvite: (recipients: InviteRecipient[], role: "read" | "write", message: string, notify: boolean) => void;
   onCreateLink: (scope: "anonymous" | "organization" | "users", type: "view" | "edit", expiration?: string) => void;
 }) {
-  const [email, setEmail] = useState("");
+  const [selected, setSelected] = useState<DirectoryPerson[]>([]);
   const [role, setRole] = useState<"read" | "write">("read");
   const [message, setMessage] = useState("");
   const [notify, setNotify] = useState(true);
@@ -72,80 +111,110 @@ export function ShareDialog({
   const [linkType, setLinkType] = useState<"view" | "edit">("view");
   const [expiration, setExpiration] = useState("");
 
+  useEffect(() => {
+    if (!open) {
+      setSelected([]);
+      setRole("read");
+      setMessage("");
+      setNotify(true);
+      setScope("organization");
+    }
+  }, [open]);
+
+  const recipients = selected
+    .map(toInviteRecipient)
+    .filter((recipient): recipient is InviteRecipient => Boolean(recipient));
+
+  function handleCreateLink() {
+    if (scope === "users") {
+      if (recipients.length === 0) return;
+      onInvite(recipients, role, message, notify);
+      return;
+    }
+    onCreateLink(scope, linkType, expiration ? new Date(expiration).toISOString() : undefined);
+  }
+
   return (
     <Dialog
       open={open}
       title={`${messages.share}${item ? `: ${item.name}` : ""}`}
       onClose={onClose}
+      footer={
+        <>
+          <Button
+            disabled={pending || (scope === "users" && recipients.length === 0)}
+            onClick={handleCreateLink}
+          >
+            {scope === "users" ? messages.send : messages.copyLink}
+          </Button>
+          {scope !== "users" ? (
+            <Button
+              variant="primary"
+              disabled={recipients.length === 0 || pending}
+              onClick={() => onInvite(recipients, role, message, notify)}
+            >
+              {messages.send}
+            </Button>
+          ) : null}
+        </>
+      }
     >
       <div className="spm-space-y-4">
         {error ? <p className="spm-text-sm spm-text-sp-danger">{error}</p> : null}
-        <div className="spm-space-y-2">
-          <input
-            className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-3 spm-py-2"
-            placeholder={messages.email}
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <select
-            className="spm-rounded-md spm-border spm-border-sp-border spm-px-3 spm-py-2"
+
+        <PeoplePicker open={open} selected={selected} messages={messages} onChange={setSelected} />
+
+        <div className="spm-flex spm-flex-wrap spm-items-center spm-gap-2">
+          <Select
             value={role}
             onChange={(event) => setRole(event.target.value as "read" | "write")}
           >
-            <option value="read">{messages.view}</option>
-            <option value="write">{messages.edit}</option>
-          </select>
-          <textarea
-            className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-3 spm-py-2"
-            placeholder={messages.message}
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-          />
-          <label className="spm-flex spm-items-center spm-gap-2 spm-text-sm">
-            <input type="checkbox" checked={notify} onChange={(event) => setNotify(event.target.checked)} />
-            {messages.notify}
-          </label>
-          <Button
-            variant="primary"
-            disabled={!email || pending}
-            onClick={() => onInvite(email, role, message, notify)}
-          >
-            {messages.grantAccess}
-          </Button>
+            <option value="read">{messages.canView}</option>
+            <option value="write">{messages.canEdit}</option>
+          </Select>
+          <Checkbox label={messages.notify} checked={notify} onChange={(_, data) => setNotify(Boolean(data.checked))} />
         </div>
+
+        <Textarea
+          resize="vertical"
+          placeholder={messages.message}
+          value={message}
+          onChange={(_, data) => setMessage(data.value)}
+        />
+
         <hr />
         <div className="spm-space-y-2">
-          <select
-            className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-3 spm-py-2"
+          <Select
             value={scope}
             onChange={(event) => setScope(event.target.value as typeof scope)}
           >
             <option value="organization">{messages.organization}</option>
             <option value="users">{messages.specificPeople}</option>
             <option value="anonymous">{messages.anyone}</option>
-          </select>
-          <select
-            className="spm-rounded-md spm-border spm-border-sp-border spm-px-3 spm-py-2"
-            value={linkType}
-            onChange={(event) => setLinkType(event.target.value as "view" | "edit")}
-          >
-            <option value="view">{messages.view}</option>
-            <option value="edit">{messages.edit}</option>
-          </select>
-          <input
-            type="datetime-local"
-            className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-3 spm-py-2"
-            value={expiration}
-            onChange={(event) => setExpiration(event.target.value)}
-          />
-          <Button
-            disabled={pending}
-            onClick={() =>
-              onCreateLink(scope, linkType, expiration ? new Date(expiration).toISOString() : undefined)
-            }
-          >
-            {messages.createLink}
-          </Button>
+          </Select>
+          {scope !== "users" ? (
+            <>
+              <Select
+                value={linkType}
+                onChange={(event) => setLinkType(event.target.value as "view" | "edit")}
+              >
+                <option value="view">{messages.view}</option>
+                <option value="edit">{messages.edit}</option>
+              </Select>
+              <Input
+                type="datetime-local"
+                value={expiration}
+                onChange={(_, data) => setExpiration(data.value)}
+              />
+              {createdLinkUrl ? (
+                <p className="spm-break-all spm-text-xs spm-text-sp-muted">
+                  {messages.copyLinkSuccess}: {createdLinkUrl}
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="spm-text-xs spm-text-sp-muted">{messages.peopleSearchPlaceholder}</p>
+          )}
         </div>
       </div>
     </Dialog>

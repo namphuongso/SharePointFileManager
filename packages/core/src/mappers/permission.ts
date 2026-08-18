@@ -84,6 +84,8 @@ export function mapPermission(permission: GraphPermission): SharePointPermission
         }
       : undefined,
     expirationDateTime: permission.expirationDateTime,
-    canRemove: !inherited,
+    // SharePoint document libraries do not reliably return inheritedFrom. Avoid
+    // destructive ACL controls when direct-vs-inherited cannot be established.
+    canRemove: Boolean(permission.link) && !inherited,
   };
 }

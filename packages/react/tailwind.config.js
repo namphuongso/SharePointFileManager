@@ -7,15 +7,18 @@ export default {
   },
   theme: {
     extend: {
-      colors: {
+          colors: {
         sp: {
           bg: "var(--spm-bg, #ffffff)",
-          surface: "var(--spm-surface, #f8fafc)",
-          border: "var(--spm-border, #e2e8f0)",
-          text: "var(--spm-text, #0f172a)",
-          muted: "var(--spm-muted, #64748b)",
-          primary: "var(--spm-primary, #2563eb)",
-          danger: "var(--spm-danger, #dc2626)",
+          surface: "var(--spm-surface, #faf9f8)",
+          border: "var(--spm-border, #edebe9)",
+          text: "var(--spm-text, #323130)",
+          muted: "var(--spm-muted, #8a8886)",
+          primary: "var(--spm-primary, #0078d4)",
+          danger: "var(--spm-danger, #d13438)",
+          hover: "var(--spm-hover, #f3f2f1)",
+          header: "var(--spm-header, #faf9f8)",
+          link: "var(--spm-link, #0078d4)",
         },
       },
     },

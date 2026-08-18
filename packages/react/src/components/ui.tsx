@@ -1,8 +1,23 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactElement, ReactNode } from "react";
+import {
+  Button as FluentButton,
+  Dialog as FluentDialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  Field,
+  Input,
+  MessageBar,
+  MessageBarBody,
+  tokens,
+} from "@fluentui/react-components";
+import { DismissRegular } from "@fluentui/react-icons";
 
-export function FolderIcon() {
+export function FolderIcon({ className = "spm-h-5 spm-w-5" }: { className?: string }) {
   return (
-    <svg className="spm-h-5 spm-w-5 spm-text-amber-500" viewBox="0 0 24 24" fill="currentColor">
+    <svg className={`${className} spm-text-[#ffb900]`} viewBox="0 0 24 24" fill="currentColor">
       <path d="M10 4l2 2h8a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h6z" />
     </svg>
   );
@@ -29,20 +44,18 @@ export function Dialog({
   children: ReactNode;
   footer?: ReactNode;
 }) {
-  if (!open) return null;
   return (
-    <div className="spm-fixed spm-inset-0 spm-z-50 spm-flex spm-items-center spm-justify-center spm-bg-black/40 spm-p-4">
-      <div className="spm-w-full spm-max-w-lg spm-rounded-xl spm-bg-white spm-shadow-xl">
-        <div className="spm-flex spm-items-center spm-justify-between spm-border-b spm-border-sp-border spm-px-4 spm-py-3">
-          <h2 className="spm-text-base spm-font-semibold">{title}</h2>
-          <button type="button" className="spm-text-sp-muted" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="spm-max-h-[70vh] spm-overflow-auto spm-px-4 spm-py-3">{children}</div>
-        {footer ? <div className="spm-flex spm-justify-end spm-gap-2 spm-border-t spm-border-sp-border spm-px-4 spm-py-3">{footer}</div> : null}
-      </div>
-    </div>
+    <FluentDialog open={open} onOpenChange={(_, data) => !data.open && onClose()} modalType="modal">
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle action={<FluentButton appearance="subtle" icon={<DismissRegular />} onClick={onClose} />}>
+            {title}
+          </DialogTitle>
+          <DialogContent>{children}</DialogContent>
+          {footer ? <DialogActions>{footer}</DialogActions> : null}
+        </DialogBody>
+      </DialogSurface>
+    </FluentDialog>
   );
 }
 
@@ -52,28 +65,60 @@ export function Button({
   variant = "secondary",
   disabled,
   type = "button",
+  className = "",
 }: {
   children: ReactNode;
   onClick?: () => void;
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
   type?: "button" | "submit";
+  className?: string;
 }) {
-  const styles =
-    variant === "primary"
-      ? "spm-bg-sp-primary spm-text-white"
-      : variant === "danger"
-        ? "spm-bg-sp-danger spm-text-white"
-        : "spm-border spm-border-sp-border spm-bg-white";
+  const appearance =
+    variant === "primary" ? "primary" : variant === "danger" ? "primary" : "secondary";
   return (
-    <button
+    <FluentButton
       type={type}
+      appearance={appearance}
       disabled={disabled}
       onClick={onClick}
-      className={`spm-rounded-md spm-px-3 spm-py-1.5 spm-text-sm disabled:spm-opacity-50 ${styles}`}
+      className={className}
+      style={variant === "danger" ? { backgroundColor: tokens.colorPaletteRedBackground3 } : undefined}
     >
       {children}
-    </button>
+    </FluentButton>
+  );
+}
+
+export function CommandButton({
+  children,
+  onClick,
+  disabled,
+  primary,
+  title,
+  icon,
+  className = "",
+}: {
+  children?: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  primary?: boolean;
+  title?: string;
+  icon?: ReactElement;
+  className?: string;
+}) {
+  return (
+    <FluentButton
+      appearance={primary ? "primary" : "subtle"}
+      disabled={disabled}
+      onClick={onClick}
+      title={title}
+      icon={icon}
+      className={className}
+      size="medium"
+    >
+      {children}
+    </FluentButton>
   );
 }
 
@@ -88,32 +133,32 @@ export function TextField({
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  type?: string;
+  type?: ComponentProps<typeof Input>["type"];
 }) {
   return (
-    <label className="spm-block spm-text-sm">
-      <span className="spm-mb-1 spm-block spm-text-sp-muted">{label}</span>
-      <input
+    <Field label={label}>
+      <Input
         type={type}
         value={value}
         placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="spm-w-full spm-rounded-md spm-border spm-border-sp-border spm-px-3 spm-py-2"
+        onChange={(_, data) => onChange(data.value)}
       />
-    </label>
+    </Field>
   );
 }
 
 export function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="spm-m-3 spm-rounded-md spm-border spm-border-red-200 spm-bg-red-50 spm-px-3 spm-py-2 spm-text-sm spm-text-red-700">
-      {message}
-      {onRetry ? (
-        <button type="button" className="spm-ml-2 spm-underline" onClick={onRetry}>
-          Retry
-        </button>
-      ) : null}
-    </div>
+    <MessageBar intent="error" className="spm-mx-3 spm-my-2">
+      <MessageBarBody>
+        {message}
+        {onRetry ? (
+          <FluentButton appearance="transparent" size="small" onClick={onRetry} className="spm-ml-2">
+            Retry
+          </FluentButton>
+        ) : null}
+      </MessageBarBody>
+    </MessageBar>
   );
 }
 
@@ -127,4 +172,23 @@ export function formatBytes(size?: number): string {
 export function formatDate(value: string | undefined, locale: string): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+}
+
+export function formatRelativeDate(value: string | undefined, locale: string): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  const diffMs = date.getTime() - Date.now();
+  const absMs = Math.abs(diffMs);
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+
+  if (absMs < minute) return rtf.format(Math.round(diffMs / 1000), "second");
+  if (absMs < hour) return rtf.format(Math.round(diffMs / minute), "minute");
+  if (absMs < day) return rtf.format(Math.round(diffMs / hour), "hour");
+  if (absMs < 7 * day) return rtf.format(Math.round(diffMs / day), "day");
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(date);
 }

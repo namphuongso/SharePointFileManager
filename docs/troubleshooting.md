@@ -20,6 +20,10 @@ Tenant có thể tắt anonymous link. Dùng `organization` hoặc `users`. Đâ
 
 Permission đang inherited. UI phải hiện "Kế thừa từ thư mục cha" và không gọi DELETE.
 
+## People picker trống khi share
+
+Token Graph phải có `People.Read` / `User.Read.All`. App registration cần delegated permissions đó và đã consent. Vẫn có thể gõ nguyên email rồi Gửi.
+
 ## Token backend không gọi được Graph
 
 Đúng. Access token của API nội bộ không dùng cho Graph. Phải `acquireTokenSilent` với Graph scopes.

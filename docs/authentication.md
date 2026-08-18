@@ -37,7 +37,7 @@ Thêm Graph delegated permissions trên **cùng** App Registration. Nên xin sco
 
 ```ts
 loginRequest: {
-  scopes: ["User.Read", "Files.ReadWrite", "Sites.ReadWrite.All"],
+  scopes: ["User.Read", "Files.ReadWrite", "Sites.ReadWrite.All", "User.Read.All", "People.Read", "Directory.Read.All"],
 }
 ```
 

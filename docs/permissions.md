@@ -7,9 +7,12 @@ Library dùng **delegated** token của user đang login. Không dùng applicati
 ```text
 Files.ReadWrite
 Sites.ReadWrite.All
+User.Read.All
+People.Read
+Directory.Read.All
 ```
 
-Đủ browse + upload + share trên document library.
+Đủ browse + upload + share + people picker trên document library.
 
 ## Least privilege theo feature
 
@@ -18,6 +21,7 @@ Sites.ReadWrite.All
 | List / download / search / preview / versions | `Files.Read` + thường cần `Sites.Read.All` với SharePoint site |
 | Upload / rename / delete / copy / move / folder | `Files.ReadWrite` |
 | Invite / createLink / remove permission | `Files.ReadWrite` ; với library SharePoint thường cần `Sites.ReadWrite.All` |
+| People picker (tên người / nhóm trong tenant) | `People.Read` + `User.Read.All` ; nhóm cần `Directory.Read.All` |
 
 `Sites.Selected` có thể hẹp hơn nhưng phải được admin gán site; không mặc định.
 
@@ -32,3 +36,7 @@ Không cấp Application `Sites.ReadWrite.All` cho SPA.
 5. Đưa scopes vào MSAL `loginRequest`
 
 Mỗi project dùng `clientId` / `siteId` / `driveId` của project đó.
+
+## Permission safety
+
+Microsoft Graph không trả về `inheritedFrom` ổn định cho OneDrive for Business/SharePoint document libraries. Library chỉ hiển thị thao tác Remove cho sharing link trực tiếp; permission user/group được coi là không xác định để tránh xóa nhầm ACL kế thừa.

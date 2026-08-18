@@ -1,10 +1,11 @@
 import type { GraphClient } from "../graph/client";
+import { childrenUrl } from "../graph/paths";
 import { pathByNameUrl } from "../graph/paths";
 import { mapDriveItem, type GraphDriveItem } from "../mappers/item";
 import type { SharePointItem, UploadOptions } from "../types/models";
 
 const SMALL_FILE_LIMIT = 4 * 1024 * 1024;
-const CHUNK_SIZE = 320 * 1024 * 10; // 3.2 MiB, multiple of 320 KiB
+const DEFAULT_CHUNK_SIZE = 320 * 1024 * 32; // 10 MiB, Microsoft-recommended stable chunk size
 
 export class UploadService {
   constructor(
@@ -18,6 +19,20 @@ export class UploadService {
       return this.uploadSmallFile(options, bytes);
     }
     return this.uploadLargeFile(options, bytes);
+  }
+
+  async createPlaceholder(parentId: string, fileName: string, signal?: AbortSignal): Promise<SharePointItem> {
+    const driveId = await this.getDriveId();
+    const item = await this.graph.post<GraphDriveItem>(
+      childrenUrl(driveId, parentId),
+      {
+        name: fileName,
+        file: {},
+        "@microsoft.graph.conflictBehavior": "rename",
+      },
+      { signal },
+    );
+    return mapDriveItem(item, driveId);
   }
 
   private async uploadSmallFile(options: UploadOptions, bytes: Uint8Array): Promise<SharePointItem> {
@@ -42,7 +57,9 @@ export class UploadService {
 
   private async uploadLargeFile(options: UploadOptions, bytes: Uint8Array): Promise<SharePointItem> {
     const driveId = await this.getDriveId();
-    const session = await this.graph.post<{ uploadUrl: string }>(
+    const session = options.resume?.uploadUrl
+      ? { uploadUrl: options.resume.uploadUrl }
+      : await this.graph.post<{ uploadUrl: string }>(
       pathByNameUrl(driveId, options.parentId, options.fileName, "createUploadSession"),
       {
         item: {
@@ -54,17 +71,26 @@ export class UploadService {
     );
 
     const total = bytes.byteLength;
-    let offset = 0;
+    const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
+    if (chunkSize <= 0 || chunkSize >= 60 * 1024 * 1024 || chunkSize % (320 * 1024) !== 0) {
+      throw new Error("chunkSize must be a positive multiple of 320 KiB and smaller than 60 MiB");
+    }
+    let offset = options.resume?.nextOffset;
+    if (offset === undefined && options.resume?.uploadUrl) {
+      offset = await this.getNextOffset(session.uploadUrl, options.signal);
+    }
+    offset ??= 0;
+    if (offset < 0 || offset > total) throw new Error("resume nextOffset is outside the file range");
     let lastItem: GraphDriveItem | undefined;
 
     try {
       while (offset < total) {
         if (options.signal?.aborted) {
           await this.cancelSession(session.uploadUrl);
-          throw options.signal.reason;
+          throw new DOMException("Upload was cancelled", "AbortError");
         }
 
-        const end = Math.min(offset + CHUNK_SIZE, total);
+        const end = Math.min(offset + chunkSize, total);
         const chunk = bytes.slice(offset, end);
         const response = await this.graph.request<Response>({
           path: session.uploadUrl,
@@ -89,10 +115,14 @@ export class UploadService {
 
         if (response.status === 201 || response.status === 200) {
           lastItem = (await response.json()) as GraphDriveItem;
+        } else if (response.status === 202) {
+          const ranges = (await response.json()) as { nextExpectedRanges?: string[] };
+          const next = ranges.nextExpectedRanges?.[0]?.split("-")[0];
+          if (next && Number.isFinite(Number(next))) offset = Number(next);
         }
       }
     } catch (error) {
-      await this.cancelSession(session.uploadUrl);
+      // Keep a valid upload session so callers can query status and resume after transient failures.
       throw error;
     }
 
@@ -114,6 +144,22 @@ export class UploadService {
     } catch {
       // Best-effort cancel.
     }
+  }
+
+  private async getNextOffset(uploadUrl: string, signal?: AbortSignal): Promise<number> {
+    const status = await this.graph.request<{ nextExpectedRanges?: string[] }>({
+      path: uploadUrl,
+      absoluteUrl: true,
+      skipAuth: true,
+      method: "GET",
+      signal,
+    });
+    const firstRange = status.nextExpectedRanges?.[0];
+    const firstOffset = firstRange?.split("-")[0];
+    if (!firstOffset || !/^\d+$/.test(firstOffset)) {
+      throw new Error("Upload session did not return a valid nextExpectedRanges value");
+    }
+    return Number(firstOffset);
   }
 }
 

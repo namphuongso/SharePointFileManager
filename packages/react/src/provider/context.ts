@@ -1,11 +1,12 @@
 import { createContext, useContext } from "react";
-import type { SharePointClient } from "@namphuongso/sharepoint-file-manager-core";
+import type { SharePointClient, NotifyPayload } from "@namphuongso/sharepoint-file-manager-core";
 import type { Messages } from "../i18n/messages";
 
 export interface SharePointContextValue {
   client: SharePointClient;
   locale: string;
   messages: Messages;
+  onNotify?: (payload: NotifyPayload) => void;
 }
 
 export const SharePointContext = createContext<SharePointContextValue | null>(null);

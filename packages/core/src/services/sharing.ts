@@ -87,4 +87,5 @@ export class PermissionService {
     const driveId = await this.getDriveId();
     await this.graph.delete(`${itemUrl(driveId, itemId)}/permissions/${permissionId}`, { signal });
   }
+
 }

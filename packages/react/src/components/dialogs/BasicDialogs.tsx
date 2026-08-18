@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
 import type { Messages } from "../../i18n/messages";
+import { FolderPicker, type FolderCrumb } from "../FolderPicker";
 import { Button, Dialog, TextField } from "../ui";
 
 export function CreateFolderDialog({
@@ -79,20 +80,22 @@ export function RenameDialog({
 }
 
 export function DeleteDialog({
-  item,
+  items,
   open,
   messages,
   pending,
   onClose,
   onConfirm,
 }: {
-  item?: SharePointItem;
+  items: SharePointItem[];
   open: boolean;
   messages: Messages;
   pending: boolean;
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const names = items.map((item) => item.name).filter(Boolean);
+
   return (
     <Dialog
       open={open}
@@ -101,14 +104,15 @@ export function DeleteDialog({
       footer={
         <>
           <Button onClick={onClose}>{messages.cancel}</Button>
-          <Button variant="danger" disabled={pending} onClick={onConfirm}>
+          <Button variant="danger" disabled={pending || names.length === 0} onClick={onConfirm}>
             {messages.delete}
           </Button>
         </>
       }
     >
-      <p className="spm-text-sm">{messages.confirmDelete}</p>
-      {item ? <p className="spm-mt-2 spm-font-medium">{item.name}</p> : null}
+      <p className="spm-text-sm">{names.length > 1 ? messages.confirmDeleteMany : messages.confirmDelete}</p>
+      {names.length === 1 ? <p className="spm-mt-2 spm-font-medium">{names[0]}</p> : null}
+      {names.length > 1 ? <p className="spm-mt-2 spm-text-sm spm-font-medium">{names.length} {messages.selected}</p> : null}
     </Dialog>
   );
 }
@@ -117,20 +121,39 @@ export function CopyMoveDialog({
   mode,
   open,
   messages,
-  currentFolderId,
+  rootId,
+  rootName,
+  initialCrumbs,
+  excludeIds,
+  singleItem,
   pending,
+  copyProgress,
+  showCopyProgress,
   onClose,
   onSubmit,
 }: {
   mode: "copy" | "move";
   open: boolean;
   messages: Messages;
-  currentFolderId: string;
+  rootId: string;
+  rootName: string;
+  initialCrumbs: FolderCrumb[];
+  excludeIds: string[];
+  singleItem?: SharePointItem;
   pending: boolean;
+  copyProgress?: number;
+  showCopyProgress?: boolean;
   onClose: () => void;
-  onSubmit: (destinationParentId: string) => void;
+  onSubmit: (destinationParentId: string, newName?: string) => void;
 }) {
-  const [destination, setDestination] = useState(currentFolderId);
+  const [destination, setDestination] = useState(rootId);
+  const [newName, setNewName] = useState(singleItem?.name ?? "");
+  const blocked = excludeIds.includes(destination);
+
+  useEffect(() => {
+    setNewName(singleItem?.name ?? "");
+  }, [singleItem?.name, open]);
+
   return (
     <Dialog
       open={open}
@@ -139,14 +162,84 @@ export function CopyMoveDialog({
       footer={
         <>
           <Button onClick={onClose}>{messages.cancel}</Button>
-          <Button variant="primary" disabled={!destination || pending} onClick={() => onSubmit(destination)}>
+          <Button
+            variant="primary"
+            disabled={!destination || pending || blocked}
+            onClick={() => onSubmit(destination, newName.trim() || undefined)}
+          >
             {mode === "copy" ? messages.copy : messages.move}
           </Button>
         </>
       }
     >
-      <TextField label={messages.destination} value={destination} onChange={setDestination} />
-      <p className="spm-mt-2 spm-text-xs spm-text-sp-muted">SharePoint item id of the destination folder.</p>
+      {singleItem ? (
+        <div className="spm-mb-3">
+          <TextField label={messages.newName} value={newName} onChange={setNewName} />
+        </div>
+      ) : null}
+      <FolderPicker
+        open={open}
+        rootId={rootId}
+        rootName={rootName}
+        initialCrumbs={initialCrumbs}
+        excludeIds={excludeIds}
+        messages={messages}
+        onFolderChange={setDestination}
+      />
+      {blocked ? <p className="spm-mt-2 spm-text-xs spm-text-sp-danger">{messages.invalidDestination}</p> : null}
+      {showCopyProgress && mode === "copy" && pending ? (
+        <div className="spm-mt-3">
+          <div className="spm-mb-1 spm-text-xs spm-text-sp-muted">
+            {messages.copyInProgress} {copyProgress !== undefined ? `${copyProgress}%` : ""}
+          </div>
+          <div className="spm-h-2 spm-w-full spm-overflow-hidden spm-rounded-full spm-bg-slate-200">
+            <div
+              className="spm-h-full spm-bg-sp-primary spm-transition-all"
+              style={{ width: `${copyProgress ?? 0}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+    </Dialog>
+  );
+}
+
+export function CheckinDialog({
+  item,
+  open,
+  messages,
+  pending,
+  onClose,
+  onSubmit,
+}: {
+  item?: SharePointItem;
+  open: boolean;
+  messages: Messages;
+  pending: boolean;
+  onClose: () => void;
+  onSubmit: (comment?: string) => void;
+}) {
+  const [comment, setComment] = useState("");
+
+  useEffect(() => {
+    if (!open) setComment("");
+  }, [open]);
+
+  return (
+    <Dialog
+      open={open}
+      title={`${messages.checkin}${item ? `: ${item.name}` : ""}`}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>{messages.cancel}</Button>
+          <Button variant="primary" disabled={pending} onClick={() => onSubmit(comment.trim() || undefined)}>
+            {messages.checkin}
+          </Button>
+        </>
+      }
+    >
+      <TextField label={messages.checkinComment} value={comment} onChange={setComment} />
     </Dialog>
   );
 }

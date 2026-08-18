@@ -38,11 +38,27 @@ export class FileService {
     itemId: string,
     signal?: AbortSignal,
   ): Promise<{ blob: Blob; fileName: string; mimeType?: string }> {
+    return this.downloadContent(itemId, "content", signal);
+  }
+
+  async downloadVersion(
+    itemId: string,
+    versionId: string,
+    signal?: AbortSignal,
+  ): Promise<{ blob: Blob; fileName: string; mimeType?: string }> {
+    return this.downloadContent(itemId, `versions/${versionId}/content`, signal);
+  }
+
+  private async downloadContent(
+    itemId: string,
+    contentPath: string,
+    signal?: AbortSignal,
+  ): Promise<{ blob: Blob; fileName: string; mimeType?: string }> {
     const item = await this.get(itemId, signal);
     const driveId = await this.getDriveId();
 
     let blob: Blob;
-    if (item.downloadUrl) {
+    if (contentPath === "content" && item.downloadUrl) {
       const response = await this.graph.request<Response>({
         path: item.downloadUrl,
         absoluteUrl: true,
@@ -53,7 +69,7 @@ export class FileService {
       blob = await response.blob();
     } else {
       const response = await this.graph.request<Response>({
-        path: `${itemUrl(driveId, itemId)}/content`,
+        path: `${itemUrl(driveId, itemId)}/${contentPath}`,
         raw: true,
         signal,
       });

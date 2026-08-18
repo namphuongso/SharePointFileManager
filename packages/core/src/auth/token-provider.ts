@@ -14,4 +14,7 @@ export interface TokenProvider {
 export const DEFAULT_GRAPH_SCOPES = [
   "Files.ReadWrite",
   "Sites.ReadWrite.All",
+  "User.Read.All",
+  "People.Read",
+  "Directory.Read.All",
 ] as const;

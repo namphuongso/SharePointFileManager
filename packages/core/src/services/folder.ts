@@ -18,8 +18,12 @@ export class FolderService {
 
   async listChildren(
     folderId: string,
-    options: { top?: number; nextLink?: string; signal?: AbortSignal } = {},
+    options: { top?: number; nextLink?: string; signal?: AbortSignal; expandListItem?: boolean } = {},
   ): Promise<PagedResult<SharePointItem>> {
+    if (!options.nextLink && options.top !== undefined) {
+      return this.listChildrenPage(folderId, options);
+    }
+
     const driveId = await this.getDriveId();
     const items: SharePointItem[] = [];
     let path: string | undefined = options.nextLink ?? childrenUrl(driveId, folderId);
@@ -28,7 +32,14 @@ export class FolderService {
     while (path) {
       const result: GraphCollection<GraphDriveItem> = await this.graph.get<GraphCollection<GraphDriveItem>>(path, {
         absoluteUrl,
-        query: absoluteUrl ? undefined : { $top: options.top ?? 200 },
+        query: absoluteUrl
+          ? undefined
+          : {
+              $top: options.top ?? 200,
+              $select:
+                "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag",
+              ...(options.expandListItem ? { $expand: "listItem($select=fields,contentType)" } : {}),
+            },
         signal: options.signal,
       });
 
@@ -50,6 +61,68 @@ export class FolderService {
     });
 
     return { items };
+  }
+
+  async listChildrenPage(
+    folderId: string,
+    options: { top?: number; nextLink?: string; signal?: AbortSignal; expandListItem?: boolean } = {},
+  ): Promise<PagedResult<SharePointItem>> {
+    const driveId = await this.getDriveId();
+    const path = options.nextLink ?? childrenUrl(driveId, folderId);
+    const result = await this.graph.get<GraphCollection<GraphDriveItem>>(path, {
+      absoluteUrl: Boolean(options.nextLink),
+      query: options.nextLink
+        ? undefined
+        : {
+            $top: options.top ?? 50,
+            $select:
+              "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag",
+            ...(options.expandListItem ? { $expand: "listItem($select=fields,contentType)" } : {}),
+          },
+      signal: options.signal,
+    });
+
+    const items: SharePointItem[] = [];
+    for (const raw of result.value ?? []) {
+      try {
+        items.push(mapDriveItem(raw, driveId));
+      } catch {
+        // Skip incomplete rows.
+      }
+    }
+
+    items.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
+
+    return {
+      items,
+      nextLink: result["@odata.nextLink"],
+    };
+  }
+
+  async listChildrenWithSort(
+    folderId: string,
+    sortField: import("../types/models").SortField = "name",
+    sortDirection: import("../types/models").SortDirection = "asc",
+    options: { signal?: AbortSignal } = {},
+  ): Promise<PagedResult<SharePointItem>> {
+    const result = await this.listChildren(folderId, options);
+    const dir = sortDirection === "asc" ? 1 : -1;
+    result.items.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+      if (sortField === "modified") {
+        const av = a.lastModifiedDateTime ?? "";
+        const bv = b.lastModifiedDateTime ?? "";
+        return av.localeCompare(bv) * dir;
+      }
+      if (sortField === "size") {
+        return ((a.size ?? 0) - (b.size ?? 0)) * dir;
+      }
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) * dir;
+    });
+    return result;
   }
 
   async create(parentId: string, name: string, signal?: AbortSignal): Promise<SharePointItem> {
@@ -83,13 +156,13 @@ export class FolderService {
       path: `${itemUrl(driveId, options.itemId)}/copy`,
       method: "POST",
       body: {
-        parentReference: { id: options.destinationParentId },
+        parentReference: { driveId, id: options.destinationParentId },
         name: options.newName,
       },
       raw: true,
       signal: options.signal,
     });
-    await waitForAsyncOperation(this.graph, response, options.signal);
+    await waitForAsyncOperation(this.graph, response, options.signal, options.onCopyProgress);
   }
 
   async move(options: CopyMoveOptions): Promise<SharePointItem> {
@@ -109,11 +182,21 @@ async function waitForAsyncOperation(
   graph: GraphClient,
   response: Response,
   signal?: AbortSignal,
+  onProgress?: (progress: import("../types/models").CopyOperationProgress) => void,
 ): Promise<void> {
   const monitorUrl = response.headers.get("Location");
-  if (!monitorUrl) return;
+  if (!monitorUrl) {
+    throw new SharePointError({
+      code: SharePointErrorCode.NetworkError,
+      message: "Copy operation did not return the Microsoft Graph monitor URL",
+    });
+  }
 
-  for (let attempt = 0; attempt < 40; attempt += 1) {
+  onProgress?.({ phase: "starting", percent: 0 });
+
+  const deadline = Date.now() + 5 * 60_000;
+  let attempt = 0;
+  while (Date.now() < deadline) {
     if (signal?.aborted) {
       throw new SharePointError({
         code: SharePointErrorCode.Cancelled,
@@ -121,21 +204,58 @@ async function waitForAsyncOperation(
       });
     }
 
-    const status = await graph.get<{ status?: string; error?: { message?: string } }>(monitorUrl, {
+    const status = await graph.get<{
+      status?: string;
+      percentComplete?: number;
+      percentageComplete?: number;
+      error?: { message?: string };
+    }>(monitorUrl, {
       absoluteUrl: true,
       signal,
     });
 
-    if (!status.status || status.status === "completed" || status.status === "succeeded") {
+    const normalizedStatus = status.status?.toLowerCase();
+    if (normalizedStatus === "completed" || normalizedStatus === "succeeded") {
+      onProgress?.({ phase: "completed", percent: 100 });
       return;
     }
-    if (status.status === "failed") {
+    if (normalizedStatus === "failed") {
+      onProgress?.({ phase: "failed", percent: 0 });
       throw new SharePointError({
         code: SharePointErrorCode.Unknown,
         message: status.error?.message ?? "Copy operation failed",
       });
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    onProgress?.({
+      phase: "monitoring",
+      percent:
+        status.percentComplete ??
+        status.percentageComplete ??
+        Math.min(95, Math.max(1, Math.round((attempt / 300) * 100))),
+    });
+    attempt += 1;
+    await waitForCopyPoll(1000, signal);
   }
+  onProgress?.({ phase: "failed", percent: 0 });
+  throw new SharePointError({
+    code: SharePointErrorCode.NetworkError,
+    message: "Copy operation did not complete before the monitoring timeout",
+  });
+}
+
+function waitForCopyPoll(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onAbort = () => {
+      if (timer) clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      reject(new SharePointError({ code: SharePointErrorCode.Cancelled, message: "Copy was cancelled" }));
+    };
+    timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }

@@ -1,3 +1,4 @@
+import { extractMetadataFromListItem } from "../mappers/list-item";
 import type { SharePointItem, UserInfo } from "../types/models";
 
 export interface GraphIdentitySet {
@@ -20,6 +21,12 @@ export interface GraphDriveItem {
   parentReference?: { id?: string; driveId?: string; path?: string };
   "@microsoft.graph.downloadUrl"?: string;
   thumbnails?: Array<{ small?: { url?: string }; medium?: { url?: string }; large?: { url?: string } }>;
+  publication?: { level?: string; versionId?: string };
+  listItem?: {
+    id?: string;
+    contentType?: { id?: string; name?: string };
+    fields?: Record<string, unknown>;
+  };
 }
 
 export interface GraphCollection<T> {
@@ -42,6 +49,8 @@ export function mapDriveItem(item: GraphDriveItem, fallbackDriveId?: string): Sh
   }
 
   const isFolder = Boolean(item.folder);
+  const listMeta = extractMetadataFromListItem(item.listItem);
+  const sensitivityLabel = extractSensitivityLabel(item.listItem?.fields);
   return {
     id: item.id,
     name: item.name,
@@ -63,5 +72,31 @@ export function mapDriveItem(item: GraphDriveItem, fallbackDriveId?: string): Sh
       item.thumbnails?.[0]?.small?.url ??
       item.thumbnails?.[0]?.large?.url,
     canPreview: Boolean(item.file),
+    listItemId: listMeta.listItemId,
+    contentType: listMeta.contentType,
+    metadata: listMeta.metadata,
+    sensitivityLabel,
+    capabilities: {
+      isCheckedOut: item.publication?.level?.toLowerCase() === "checkout",
+    },
   };
+}
+
+function extractSensitivityLabel(fields?: Record<string, unknown>): string | undefined {
+  if (!fields) return undefined;
+  const candidates = [
+    fields._ComplianceTag,
+    fields.Sensitivity,
+    fields.SensitivityLabel,
+    fields._SensitivityLabel,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    if (candidate && typeof candidate === "object") {
+      const record = candidate as Record<string, unknown>;
+      if (typeof record.Label === "string" && record.Label.trim()) return record.Label.trim();
+      if (typeof record.displayName === "string" && record.displayName.trim()) return record.displayName.trim();
+    }
+  }
+  return undefined;
 }
