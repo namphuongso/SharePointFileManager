@@ -13,8 +13,7 @@ import { CheckoutService } from "./services/checkout";
 import { UploadService } from "./services/upload";
 import { ListItemService } from "./services/list-item";
 import { ActivityService } from "./services/activity";
-import { DeltaService } from "./services/delta";
-import type { OfficeFileKind, ResolvedSharePointConfig, SharePointConfig, SharePointItem } from "./types/models";
+import type { ResolvedSharePointConfig, SharePointConfig } from "./types/models";
 
 export class SharePointClient {
   readonly config: ResolvedSharePointConfig;
@@ -31,10 +30,6 @@ export class SharePointClient {
   readonly checkout: CheckoutService;
   readonly listItems: ListItemService;
   readonly activities: ActivityService;
-  readonly delta: DeltaService;
-  /** Spec-aligned aliases retained alongside the original service names. */
-  readonly driveItems: FolderService;
-  readonly lists: ListItemService;
 
   private driveIdPromise?: Promise<string>;
 
@@ -63,9 +58,6 @@ export class SharePointClient {
       this.config.listId,
     );
     this.activities = new ActivityService(this.graph, () => this.getDriveId());
-    this.delta = new DeltaService(this.graph);
-    this.driveItems = this.folders;
-    this.lists = this.listItems;
   }
 
   get tokenProvider(): TokenProvider {
@@ -101,19 +93,5 @@ export class SharePointClient {
     }
 
     return (await this.drives.getDefaultDrive()).id;
-  }
-
-  /** Create an empty Office file placeholder (SharePoint opens it in Office Online). */
-  async createOfficeFile(
-    parentId: string,
-    kind: OfficeFileKind,
-    signal?: AbortSignal,
-  ): Promise<SharePointItem> {
-    const names: Record<OfficeFileKind, string> = {
-      word: "Document.docx",
-      excel: "Workbook.xlsx",
-      powerpoint: "Presentation.pptx",
-    };
-    return this.upload.createPlaceholder(parentId, names[kind], signal);
   }
 }

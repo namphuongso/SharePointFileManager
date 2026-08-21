@@ -13,6 +13,8 @@ export const queryKeys = {
   childrenInfinite: (siteId: string, drive: string, folderId: string, expandListItem: boolean) =>
     ["sp", siteId, drive, "children-infinite", folderId, expandListItem] as const,
   listColumns: (siteId: string, drive: string) => ["sp", siteId, drive, "list-columns"] as const,
+  accessibleLibraryItems: (siteId: string, drive: string) =>
+    ["sp", siteId, drive, "accessible-library-items"] as const,
   listItemFields: (siteId: string, drive: string, itemId: string) =>
     ["sp", siteId, drive, "list-item-fields", itemId] as const,
   activities: (siteId: string, drive: string, itemId: string) =>

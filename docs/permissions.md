@@ -12,14 +12,15 @@ People.Read
 Directory.Read.All
 ```
 
-Đủ browse + upload + share + people picker trên document library.
+Đủ browse + upload + share + people picker trên document library. Browse khi `children` rỗng dùng list-item `$expand=driveItem` (không cần `Files.Read.All` / `sharedWithMe`).
 
 ## Least privilege theo feature
 
 | Feature | Quyền tối thiểu (tham khảo Graph docs) |
 |---|---|
-| List / download / search / preview / versions | `Files.Read` + thường cần `Sites.Read.All` với SharePoint site |
-| Upload / rename / delete / copy / move / folder | `Files.ReadWrite` |
+| List / download / search / preview / versions | `Files.ReadWrite` hoặc `Sites.Read.All` / `Sites.ReadWrite.All` trên SharePoint site |
+| Security-trimmed library listing (`lists/.../items?$expand=driveItem`) | `Sites.Read.All` / `Sites.ReadWrite.All` |
+| Upload / rename / delete / copy / move / folder | `Files.ReadWrite` / `Sites.ReadWrite.All` |
 | Invite / createLink / remove permission | `Files.ReadWrite` ; với library SharePoint thường cần `Sites.ReadWrite.All` |
 | People picker (tên người / nhóm trong tenant) | `People.Read` + `User.Read.All` ; nhóm cần `Directory.Read.All` |
 

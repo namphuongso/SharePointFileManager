@@ -102,11 +102,8 @@ export function ManageAccessDialog({
             messages={messages}
             canRemove={permission.canRemove}
             onRemove={() => onRemove(permission.id)}
-            onChangeRole={
-              permission.inherited || !onChangeRole
-                ? undefined
-                : (role) => onChangeRole(permission.id, [role])
-            }
+            // Keep user/group ACL entries read-only to avoid mutating inherited or ambiguous permissions.
+            onChangeRole={undefined}
           />
         ))}
       </Section>
@@ -120,11 +117,8 @@ export function ManageAccessDialog({
             messages={messages}
             canRemove={permission.canRemove}
             onRemove={() => onRemove(permission.id)}
-            onChangeRole={
-              permission.inherited || !onChangeRole
-                ? undefined
-                : (role) => onChangeRole(permission.id, [role])
-            }
+            // Keep user/group ACL entries read-only to avoid mutating inherited or ambiguous permissions.
+            onChangeRole={undefined}
           />
         ))}
       </Section>

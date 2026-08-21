@@ -4,11 +4,12 @@ Thư viện frontend dùng chung để quản lý file/folder trên **SharePoint
 
 ```text
 Host React app (MSAL)
-  → @namphuongso/sharepoint-file-manager
-      → SharePoint core (Graph client + services)
-          → Microsoft Graph
-              → SharePoint Online
+  → SharePointAppProvider (config: siteUrl/siteId + token + features)
+      → SharePointFileManager libraryName="..."
+          → Microsoft Graph → SharePoint Online
 ```
+
+Host chỉ cần **2 chỗ**. Mọi resolve site, Graph client, UI, hooks nằm trong thư viện.
 
 ## Cài đặt
 
@@ -16,29 +17,54 @@ Host React app (MSAL)
 npm install @namphuongso/sharepoint-file-manager @tanstack/react-query @azure/msal-browser
 ```
 
-```ts
+### 1) Provider + config (app gốc)
+
+```tsx
 import "@namphuongso/sharepoint-file-manager/styles.css";
-import { SharePointFileManager, createMsalTokenProvider } from "@namphuongso/sharepoint-file-manager";
+import {
+  SharePointAppProvider,
+  SharePointFileManager,
+  createMsalTokenProvider,
+} from "@namphuongso/sharepoint-file-manager";
 import { useMsal } from "@azure/msal-react";
 
-export function Documents() {
+function AppRoot({ children }: { children: React.ReactNode }) {
   const { instance, accounts } = useMsal();
   const account = accounts[0];
-  if (!account) return null;
-
-  const tokenProvider = createMsalTokenProvider({ instance, account });
+  if (!account) return <>{children}</>;
 
   return (
-    <SharePointFileManager
+    <SharePointAppProvider
       locale="vi-VN"
       config={{
-        siteId: "contoso.sharepoint.com,site-guid,web-guid",
-        driveId: "b!...",
-        tokenProvider,
+        siteUrl: "https://contoso.sharepoint.com/sites/eOffice",
+        // hoặc siteId: "contoso.sharepoint.com,site-guid,web-guid",
+        tokenProvider: createMsalTokenProvider({ instance, account }),
+        features: { delete: false }, // optional
       }}
-    />
+    >
+      {children}
+    </SharePointAppProvider>
   );
 }
+```
+
+### 2) Nơi sử dụng — chỉ `libraryName`
+
+```tsx
+export function DocumentTestPage() {
+  return <SharePointFileManager libraryName="eDocumentTest" className="h-full" />;
+}
+```
+
+### Standalone (không AppProvider)
+
+```tsx
+<SharePointFileManager
+  locale="vi-VN"
+  embedded={false}
+  config={{ siteId, driveId, tokenProvider }}
+/>
 ```
 
 Library **không login**. App host phải đã đăng nhập Microsoft. `createMsalTokenProvider` chỉ gọi `acquireTokenSilent` để lấy token Graph.

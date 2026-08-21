@@ -84,7 +84,8 @@ export function mapPermission(permission: GraphPermission): SharePointPermission
         }
       : undefined,
     expirationDateTime: permission.expirationDateTime,
-    // Prefer explicit inheritedFrom when available; otherwise allow managed ACL edits.
-    canRemove: !inherited && (kind === "link" || kind === "user" || kind === "group" || kind === "siteGroup"),
+    // Permission inheritance is not always reliable in Graph for SharePoint libraries.
+    // To avoid revoking inherited ACL entries by mistake, only direct sharing links are removable.
+    canRemove: !inherited && kind === "link",
   };
 }

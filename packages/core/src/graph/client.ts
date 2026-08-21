@@ -30,9 +30,9 @@ export class GraphClient {
     },
   ) {}
 
-  /** Build an endpoint against the configured Graph cloud v1.0 API. */
+  /** Build an endpoint against Microsoft Graph v1.0 (strips /v1.0 or /beta from base). */
   apiUrl(path: string): string {
-    const configuredBase = this.options.baseUrl.replace(/\/v1\.0\/?$/i, "");
+    const configuredBase = this.options.baseUrl.replace(/\/(v1\.0|beta)\/?$/i, "");
     return joinUrl(`${configuredBase}/v1.0`, path);
   }
 
@@ -165,7 +165,7 @@ export class GraphClient {
   }
 
   private buildUrl(options: GraphRequestOptions): string {
-    const base = options.absoluteUrl ? options.path : joinUrl(this.options.baseUrl, options.path);
+    const base = options.absoluteUrl ? options.path : this.apiUrl(options.path);
     if (!options.query) return base;
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(options.query)) {

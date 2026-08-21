@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FeatureConfig, SearchScope, SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
-import type { OfficeFileKind } from "@namphuongso/sharepoint-file-manager-core";
+import { canPerformItemAction } from "@namphuongso/sharepoint-file-manager-core";
 import {
   Button,
   Menu,
@@ -36,7 +36,7 @@ import {
   TextDensityRegular,
 } from "@fluentui/react-icons";
 import type { Messages } from "../i18n/messages";
-import type { SelectionAction } from "./SelectionToolbar";
+import type { SelectionAction } from "../types/selection-action";
 import { FileTypeChipIcon, type FileKind } from "./FileTypeIcon";
 
 export type FileTypeFilter = Extract<FileKind, "word" | "excel" | "powerpoint" | "pdf">;
@@ -55,12 +55,10 @@ export function CommandBar({
   showColumnChooser,
   detailsOpen,
   typeFilter,
-  createOfficePending,
   onViewChange,
   onNewFolder,
   onUpload,
   onUploadFolder,
-  onCreateOffice,
   onRefresh,
   onClearSelection,
   onSelectionAction,
@@ -70,6 +68,7 @@ export function CommandBar({
   onToggleColumnChooser,
   onToggleDetails,
   onTypeFilterChange,
+  viewModes,
 }: {
   messages: Messages;
   features: Required<FeatureConfig>;
@@ -82,12 +81,10 @@ export function CommandBar({
   showColumnChooser: boolean;
   detailsOpen: boolean;
   typeFilter?: FileTypeFilter;
-  createOfficePending?: boolean;
   onViewChange: (view: "list" | "compact" | "grid") => void;
   onNewFolder: () => void;
   onUpload: () => void;
   onUploadFolder: () => void;
-  onCreateOffice: (kind: OfficeFileKind) => void;
   onRefresh: () => void;
   onClearSelection: () => void;
   onSelectionAction: (action: SelectionAction) => void;
@@ -97,10 +94,177 @@ export function CommandBar({
   onToggleColumnChooser: () => void;
   onToggleDetails: () => void;
   onTypeFilterChange: (value?: FileTypeFilter) => void;
+  viewModes: Array<"list" | "compact" | "grid">;
 }) {
   const hasSelection = selectedItems.length > 0;
-  const canCreate = features.createFolder || features.createOfficeFile;
+  const canCreate = features.createFolder || features.upload;
   const createLabel = messages.createOrUpload;
+  const commandAreaRef = useRef<HTMLDivElement>(null);
+  const [maxInlineCommands, setMaxInlineCommands] = useState<number>(999);
+
+  const selectionDisabled = useMemo(
+    () => ({
+      download:
+        selectedItems.filter((item) => item.type === "file").length === 0 ||
+        selectedItems
+          .filter((item) => item.type === "file")
+          .some((item) => !canPerformItemAction(item, "download")),
+      copy: selectedItems.length === 0,
+      move: selectedItems.length === 0,
+      share: selectedItems.length !== 1 || !canPerformItemAction(selectedItems[0]!, "share"),
+      rename: selectedItems.length !== 1 || !canPerformItemAction(selectedItems[0]!, "rename"),
+      delete: selectedItems.length === 0,
+      preview: selectedItems.length !== 1 || !canPerformItemAction(selectedItems[0]!, "preview"),
+      manageAccess:
+        selectedItems.length !== 1 || !canPerformItemAction(selectedItems[0]!, "manageAccess"),
+    }),
+    [selectedItems],
+  );
+
+  const primaryCommands = useMemo(
+    () =>
+      hasSelection
+        ? [
+            {
+              key: "download",
+              label: messages.download,
+              icon: <ArrowDownloadRegular />,
+              show: features.download,
+              disabled: selectionDisabled.download,
+              onClick: () => onSelectionAction("download"),
+              priority: 1,
+            },
+            {
+              key: "copy",
+              label: messages.copy,
+              icon: <CopyRegular />,
+              show: features.copy,
+              disabled: selectionDisabled.copy,
+              onClick: () => onSelectionAction("copy"),
+              priority: 2,
+            },
+            {
+              key: "move",
+              label: messages.move,
+              icon: <ArrowMoveRegular />,
+              show: features.move,
+              disabled: selectionDisabled.move,
+              onClick: () => onSelectionAction("move"),
+              priority: 3,
+            },
+            {
+              key: "share",
+              label: messages.share,
+              icon: <ShareRegular />,
+              show: features.share,
+              disabled: selectionDisabled.share,
+              onClick: () => onSelectionAction("share"),
+              priority: 4,
+            },
+            {
+              key: "delete",
+              label: messages.delete,
+              icon: <DeleteRegular />,
+              show: features.delete,
+              disabled: selectionDisabled.delete,
+              onClick: () => onSelectionAction("delete"),
+              priority: 5,
+            },
+            {
+              key: "cancel",
+              label: messages.cancel,
+              icon: <DismissRegular />,
+              show: true,
+              disabled: false,
+              onClick: onClearSelection,
+              priority: 6,
+            },
+          ]
+        : [
+            {
+              key: "refresh",
+              label: messages.refresh,
+              icon: <ArrowClockwiseRegular />,
+              show: true,
+              disabled: false,
+              onClick: onRefresh,
+              priority: 1,
+            },
+            {
+              key: "filters",
+              label: messages.filters,
+              icon: <FilterRegular />,
+              show: features.globalSearch && searchScope === "library",
+              disabled: false,
+              onClick: onToggleFilters,
+              priority: 2,
+            },
+            {
+              key: "scope",
+              label: searchScope === "library" ? messages.searchScopeLibrary : messages.searchScopeFolder,
+              icon: <SearchRegular />,
+              show: features.globalSearch,
+              disabled: false,
+              onClick: () => onSearchScopeChange(searchScope === "library" ? "folder" : "library"),
+              priority: 3,
+            },
+          ],
+    [
+      features.copy,
+      features.delete,
+      features.download,
+      features.globalSearch,
+      features.move,
+      features.share,
+      hasSelection,
+      messages.cancel,
+      messages.copy,
+      messages.delete,
+      messages.download,
+      messages.filters,
+      messages.move,
+      messages.refresh,
+      messages.searchScopeFolder,
+      messages.searchScopeLibrary,
+      messages.share,
+      onClearSelection,
+      onRefresh,
+      onSearchScopeChange,
+      onSelectionAction,
+      onToggleFilters,
+      searchScope,
+      selectionDisabled.copy,
+      selectionDisabled.delete,
+      selectionDisabled.download,
+      selectionDisabled.move,
+      selectionDisabled.share,
+    ],
+  ).filter((command) => command.show);
+
+  useEffect(() => {
+    const element = commandAreaRef.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      const width = element.clientWidth;
+      let available = Math.max(180, width - 24);
+      const estimated = [...primaryCommands]
+        .sort((a, b) => a.priority - b.priority)
+        .map((command) => ({ key: command.key, width: Math.max(84, command.label.length * 7 + 44) }));
+      let count = 0;
+      for (const command of estimated) {
+        if (available - command.width < 44) break;
+        available -= command.width;
+        count += 1;
+      }
+      setMaxInlineCommands(Math.max(1, count));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [primaryCommands]);
+
+  const orderedCommands = [...primaryCommands].sort((a, b) => a.priority - b.priority);
+  const inlineCommands = orderedCommands.slice(0, maxInlineCommands);
+  const overflowCommands = orderedCommands.slice(maxInlineCommands);
 
   return (
     <div className="spm-chrome">
@@ -120,46 +284,27 @@ export function CommandBar({
 
       <div className="spm-command-surface">
         <div className="spm-command-row">
-        <div className="spm-command-links">
+        <div ref={commandAreaRef} className="spm-command-links">
           {hasSelection ? (
             <>
               <span className="spm-selection-count">
                 {selectedItems.length} {messages.selected}
               </span>
-              {features.download && selectedItems.some((item) => item.type === "file") ? (
-                <CommandLink icon={<ArrowDownloadRegular />} onClick={() => onSelectionAction("download")}>
-                  {messages.download}
+              {inlineCommands.map((command) => (
+                <CommandLink key={command.key} icon={command.icon} onClick={command.onClick} disabled={command.disabled}>
+                  {command.label}
                 </CommandLink>
-              ) : null}
-              {features.copy ? (
-                <CommandLink icon={<CopyRegular />} onClick={() => onSelectionAction("copy")}>
-                  {messages.copy}
-                </CommandLink>
-              ) : null}
-              {features.move ? (
-                <CommandLink icon={<ArrowMoveRegular />} onClick={() => onSelectionAction("move")}>
-                  {messages.move}
-                </CommandLink>
-              ) : null}
-              {features.share && selectedItems.length === 1 ? (
-                <CommandLink icon={<ShareRegular />} onClick={() => onSelectionAction("share")}>
-                  {messages.share}
-                </CommandLink>
+              ))}
+              {overflowCommands.length > 0 ? (
+                <OverflowMenu commands={overflowCommands} label={messages.moreActions} />
               ) : null}
               <SelectionMoreMenu
                 items={selectedItems}
                 messages={messages}
                 features={features}
                 onAction={onSelectionAction}
+                disabledState={selectionDisabled}
               />
-              {features.delete ? (
-                <CommandLink icon={<DeleteRegular />} onClick={() => onSelectionAction("delete")}>
-                  {messages.delete}
-                </CommandLink>
-              ) : null}
-              <CommandLink icon={<DismissRegular />} onClick={onClearSelection}>
-                {messages.cancel}
-              </CommandLink>
             </>
           ) : (
             <>
@@ -168,28 +313,24 @@ export function CommandBar({
                   label={createLabel}
                   messages={messages}
                   features={features}
-                  pending={createOfficePending}
                   onNewFolder={onNewFolder}
                   onUpload={onUpload}
                   onUploadFolder={onUploadFolder}
-                  onCreateOffice={onCreateOffice}
                 />
               ) : null}
-              <CommandLink icon={<ArrowClockwiseRegular />} onClick={onRefresh}>
-                {messages.refresh}
-              </CommandLink>
-              {features.globalSearch && searchScope === "library" ? (
-                <CommandLink icon={<FilterRegular />} active={showFilters} onClick={onToggleFilters}>
-                  {messages.filters}
-                </CommandLink>
-              ) : null}
-              {features.globalSearch ? (
+              {inlineCommands.map((command) => (
                 <CommandLink
-                  icon={<SearchRegular />}
-                  onClick={() => onSearchScopeChange(searchScope === "library" ? "folder" : "library")}
+                  key={command.key}
+                  icon={command.icon}
+                  onClick={command.onClick}
+                  active={command.key === "filters" && showFilters}
+                  disabled={command.disabled}
                 >
-                  {searchScope === "library" ? messages.searchScopeLibrary : messages.searchScopeFolder}
+                  {command.label}
                 </CommandLink>
+              ))}
+              {overflowCommands.length > 0 ? (
+                <OverflowMenu commands={overflowCommands} label={messages.moreActions} />
               ) : null}
             </>
           )}
@@ -240,6 +381,7 @@ export function CommandBar({
                 aria-pressed={view === "list"}
                 onClick={() => onViewChange("list")}
                 title={messages.list}
+                disabled={!viewModes.includes("list")}
               />
               <Button
                 appearance={view === "compact" ? "primary" : "subtle"}
@@ -247,6 +389,7 @@ export function CommandBar({
                 aria-pressed={view === "compact"}
                 onClick={() => onViewChange("compact")}
                 title={messages.compact}
+                disabled={!viewModes.includes("compact")}
               />
               <Button
                 appearance={view === "grid" ? "primary" : "subtle"}
@@ -254,6 +397,7 @@ export function CommandBar({
                 aria-pressed={view === "grid"}
                 onClick={() => onViewChange("grid")}
                 title={messages.grid}
+                disabled={!viewModes.includes("grid")}
               />
             </>
             {features.properties ? (
@@ -279,20 +423,16 @@ function CreateMenu({
   label,
   messages,
   features,
-  pending,
   onNewFolder,
   onUpload,
   onUploadFolder,
-  onCreateOffice,
 }: {
   label: string;
   messages: Messages;
   features: Required<FeatureConfig>;
-  pending?: boolean;
   onNewFolder: () => void;
   onUpload: () => void;
   onUploadFolder: () => void;
-  onCreateOffice: (kind: OfficeFileKind) => void;
 }) {
   return (
     <Menu>
@@ -305,17 +445,9 @@ function CreateMenu({
       <MenuPopover>
         <MenuList>
           {features.createFolder ? <MenuItem icon={<FolderAddRegular />} onClick={onNewFolder}>{messages.newFolder}</MenuItem> : null}
-          {features.createOfficeFile ? (
-            <>
-              <MenuDivider />
-              <MenuItem disabled={pending} onClick={() => onCreateOffice("word")}>{messages.createWord}</MenuItem>
-              <MenuItem disabled={pending} onClick={() => onCreateOffice("excel")}>{messages.createExcel}</MenuItem>
-              <MenuItem disabled={pending} onClick={() => onCreateOffice("powerpoint")}>{messages.createPowerPoint}</MenuItem>
-            </>
-          ) : null}
           {features.upload ? (
             <>
-              <MenuDivider />
+              {features.createFolder ? <MenuDivider /> : null}
               <MenuItem icon={<ArrowUploadRegular />} onClick={onUpload}>{messages.uploadFiles}</MenuItem>
               <MenuItem icon={<FolderAddRegular />} onClick={onUploadFolder}>{messages.uploadFolder}</MenuItem>
             </>
@@ -331,11 +463,13 @@ function SelectionMoreMenu({
   messages,
   features,
   onAction,
+  disabledState,
 }: {
   items: SharePointItem[];
   messages: Messages;
   features: Required<FeatureConfig>;
   onAction: (action: SelectionAction) => void;
+  disabledState: Record<string, boolean>;
 }) {
   const single = items.length === 1 ? items[0] : undefined;
   const hasActions = Boolean(
@@ -356,13 +490,13 @@ function SelectionMoreMenu({
       <MenuPopover>
         <MenuList>
           {single?.type === "file" && features.preview ? (
-            <MenuItem icon={<DocumentOnePageRegular />} onClick={() => onAction("preview")}>{messages.preview}</MenuItem>
+            <MenuItem disabled={disabledState.preview} icon={<DocumentOnePageRegular />} onClick={() => onAction("preview")}>{messages.preview}</MenuItem>
           ) : null}
           {single && features.rename ? (
-            <MenuItem icon={<RenameRegular />} onClick={() => onAction("rename")}>{messages.rename}</MenuItem>
+            <MenuItem disabled={disabledState.rename} icon={<RenameRegular />} onClick={() => onAction("rename")}>{messages.rename}</MenuItem>
           ) : null}
           {single && features.manageAccess ? (
-            <MenuItem icon={<SettingsRegular />} onClick={() => onAction("manageAccess")}>{messages.manageAccess}</MenuItem>
+            <MenuItem disabled={disabledState.manageAccess} icon={<SettingsRegular />} onClick={() => onAction("manageAccess")}>{messages.manageAccess}</MenuItem>
           ) : null}
           {items.length > 1 && features.bulkMetadata && features.metadata ? (
             <MenuItem icon={<ColumnTripleRegular />} onClick={() => onAction("bulkMetadata")}>{messages.bulkEditMetadata}</MenuItem>
@@ -378,11 +512,13 @@ function CommandLink({
   icon,
   onClick,
   active,
+  disabled,
 }: {
   children: string;
   icon?: ReactNode;
   onClick?: () => void;
   active?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Button
@@ -392,9 +528,37 @@ function CommandLink({
       className={`spm-command-link ${active ? "active" : ""}`}
       aria-pressed={active}
       onClick={onClick}
+      disabled={disabled}
     >
       {icon ? <span className="spm-command-link-icon">{icon}</span> : null}
       {children}
     </Button>
+  );
+}
+
+function OverflowMenu({
+  commands,
+  label,
+}: {
+  commands: Array<{ key: string; label: string; icon?: JSX.Element; onClick: () => void; disabled?: boolean }>;
+  label: string;
+}) {
+  return (
+    <Menu>
+      <MenuTrigger disableButtonEnhancement>
+        <Button appearance="subtle" icon={<MoreHorizontalRegular />} className="spm-toolbar-button">
+          {label}
+        </Button>
+      </MenuTrigger>
+      <MenuPopover>
+        <MenuList>
+          {commands.map((command) => (
+            <MenuItem key={command.key} icon={command.icon} disabled={command.disabled} onClick={command.onClick}>
+              {command.label}
+            </MenuItem>
+          ))}
+        </MenuList>
+      </MenuPopover>
+    </Menu>
   );
 }

@@ -42,7 +42,7 @@ export function useSharePointSite(
 }
 
 export function useSiteDrives(
-  config: Pick<SharePointConfig, "siteId" | "tokenProvider" | "scopes" | "graphBaseUrl"> | undefined,
+  config: (Pick<SharePointConfig, "tokenProvider" | "scopes" | "graphBaseUrl"> & { siteId: string }) | undefined,
 ) {
   return useQuery({
     queryKey: queryKeys.drives(config?.siteId ?? ""),
@@ -60,7 +60,7 @@ export function useSiteDrives(
 }
 
 export function useSiteLists(
-  config: Pick<SharePointConfig, "siteId" | "tokenProvider" | "scopes" | "graphBaseUrl"> | undefined,
+  config: (Pick<SharePointConfig, "tokenProvider" | "scopes" | "graphBaseUrl"> & { siteId: string }) | undefined,
 ) {
   return useQuery({
     queryKey: queryKeys.lists(config?.siteId ?? ""),
@@ -106,6 +106,17 @@ export function useFolderChildren(folderId: string | undefined, expandListItem =
   });
 }
 
+export function useAccessibleLibraryItems(enabled = true) {
+  const { client } = useSharePoint();
+  return useQuery({
+    queryKey: queryKeys.accessibleLibraryItems(client.config.siteId, client.cacheScope),
+    enabled,
+    queryFn: ({ signal }) => client.listItems.listAccessibleDriveItems(signal),
+    staleTime: 60_000,
+    retry: 1,
+  });
+}
+
 export function useItem(itemId: string | undefined, expandListItem = true) {
   const { client } = useSharePoint();
   return useQuery({
@@ -115,7 +126,7 @@ export function useItem(itemId: string | undefined, expandListItem = true) {
       `${itemId ?? ""}:${expandListItem ? "expanded" : "basic"}`,
     ),
     enabled: Boolean(itemId),
-    queryFn: ({ signal }) => client.folders.get(itemId!, signal),
+    queryFn: ({ signal }) => client.folders.get(itemId!, { signal, expandListItem }),
   });
 }
 
@@ -208,6 +219,9 @@ export function useUpdateListItemFields(itemId: string) {
       queryClient.invalidateQueries({
         queryKey: ["sp", client.config.siteId, client.cacheScope, "children-infinite"],
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.accessibleLibraryItems(client.config.siteId, client.cacheScope),
+      });
     },
   });
 }
@@ -233,6 +247,9 @@ export function useBulkUpdateListItemFields() {
       queryClient.invalidateQueries({ queryKey: ["sp", client.config.siteId, client.cacheScope, "children"] });
       queryClient.invalidateQueries({
         queryKey: ["sp", client.config.siteId, client.cacheScope, "children-infinite"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.accessibleLibraryItems(client.config.siteId, client.cacheScope),
       });
     },
   });
@@ -271,12 +288,22 @@ function useInvalidateFolder() {
   const { client } = useSharePoint();
   const queryClient = useQueryClient();
   return (folderId?: string) => {
-    if (folderId) {
-      return queryClient.invalidateQueries({
-        queryKey: queryKeys.children(client.config.siteId, client.cacheScope, folderId),
-      });
+    const siteId = client.config.siteId;
+    const drive = client.cacheScope;
+    if (!folderId) {
+      return queryClient.invalidateQueries({ queryKey: ["sp", siteId] });
     }
-    return queryClient.invalidateQueries({ queryKey: ["sp", client.config.siteId] });
+
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.children(siteId, drive, folderId),
+    });
+    // Prefix match: covers both expandListItem true/false infinite queries.
+    void queryClient.invalidateQueries({
+      queryKey: ["sp", siteId, drive, "children-infinite", folderId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.accessibleLibraryItems(siteId, drive),
+    });
   };
 }
 
@@ -472,16 +499,6 @@ export function useCheckout(parentId: string) {
       if (input.action === "checkin") return client.checkout.checkin(input.itemId, input.comment);
       return client.checkout.discardCheckout(input.itemId);
     },
-    onSuccess: () => invalidate(parentId),
-  });
-}
-
-export function useCreateOfficeFile(parentId: string) {
-  const { client } = useSharePoint();
-  const invalidate = useInvalidateFolder();
-  return useMutation({
-    mutationFn: (kind: import("@namphuongso/sharepoint-file-manager-core").OfficeFileKind) =>
-      client.createOfficeFile(parentId, kind),
     onSuccess: () => invalidate(parentId),
   });
 }

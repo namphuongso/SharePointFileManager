@@ -2,7 +2,6 @@ import {
   createLightTheme,
   createDarkTheme,
   type BrandVariants,
-  themeToTokensObject,
   type Theme,
 } from "@fluentui/react-components";
 
@@ -46,5 +45,3 @@ export const sharePointDarkTheme: Theme = {
   borderRadiusXLarge: "16px",
   borderRadiusCircular: "10000px",
 };
-
-export const sharePointTokens = themeToTokensObject(sharePointLightTheme);

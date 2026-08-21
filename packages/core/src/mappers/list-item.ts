@@ -130,11 +130,9 @@ function isSystemMetadataKey(key: string): boolean {
   const normalized = key.trim();
   if (normalized.startsWith("@")) return true;
   if (normalized.toLowerCase() === "id") return true;
-  if (BUILTIN_COLUMN_NAMES.has(key)) return true;
-  if (key.startsWith("_")) return true;
+  if (BUILTIN_COLUMN_NAMES.has(normalized)) return true;
+  // Keep custom internal names that begin with "_" and avoid dropping valid metadata.
   if (key.startsWith("OData__")) return true;
-  if (key.endsWith("LookupId")) return true;
-  if (key.endsWith("StringId")) return true;
   return false;
 }
 
@@ -152,23 +150,47 @@ function detectColumnType(column: GraphListColumn): string | undefined {
 function normalizeFieldValue(value: unknown): string | number | boolean | null | undefined {
   if (value === null || value === undefined) return null;
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    if (typeof record.displayName === "string") return record.displayName;
-    if (typeof record.Label === "string") return record.Label;
-    if (typeof record.lookupValue === "string") return record.lookupValue;
-    if (Array.isArray(value)) {
-      const labels = value
-        .map((entry) => {
-          if (typeof entry === "string") return entry;
-          if (entry && typeof entry === "object" && typeof (entry as Record<string, unknown>).displayName === "string") {
-            return (entry as Record<string, string>).displayName;
-          }
-          return undefined;
-        })
-        .filter((entry): entry is string => Boolean(entry));
-      if (labels.length > 0) return labels.join(", ");
-    }
-  }
+  if (Array.isArray(value)) return normalizeArrayFieldValue(value);
+  if (typeof value === "object") return normalizeObjectFieldValue(value);
   return String(value);
+}
+
+function normalizeArrayFieldValue(values: unknown[]): string | null {
+  const labels = values
+    .map((entry) => normalizeFieldValue(entry))
+    .filter((entry): entry is string | number | boolean => entry !== null && entry !== undefined)
+    .map((entry) => String(entry).trim())
+    .filter((entry) => entry.length > 0);
+  if (labels.length === 0) return null;
+  return [...new Set(labels)].join(", ");
+}
+
+function normalizeObjectFieldValue(value: object): string {
+  const record = value as Record<string, unknown>;
+  const candidates = [
+    record.LookupValue,
+    record.lookupValue,
+    record.displayName,
+    record.DisplayName,
+    record.Title,
+    record.Name,
+    record.name,
+    record.Label,
+    record.label,
+    record.Email,
+    record.email,
+    record.Url,
+    record.value,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    if (typeof candidate === "number" || typeof candidate === "boolean") return String(candidate);
+  }
+
+  if (Array.isArray(record.results)) {
+    const normalized = normalizeArrayFieldValue(record.results);
+    if (normalized) return normalized;
+  }
+
+  return JSON.stringify(record);
 }

@@ -1,7 +1,5 @@
 export interface Messages {
   files: string;
-  search: string;
-  searchPlaceholder: string;
   newFolder: string;
   upload: string;
   list: string;
@@ -36,7 +34,6 @@ export interface Messages {
   edit: string;
   message: string;
   notify: string;
-  createLink: string;
   copyLink: string;
   revoke: string;
   inherited: string;
@@ -53,7 +50,6 @@ export interface Messages {
   anyone: string;
   organization: string;
   specificPeople: string;
-  destination: string;
   selectDestination: string;
   noSubfolders: string;
   invalidDestination: string;
@@ -90,12 +86,8 @@ export interface Messages {
   checkin: string;
   discardCheckout: string;
   checkinComment: string;
-  createWord: string;
-  createExcel: string;
-  createPowerPoint: string;
   print: string;
   uploadFolder: string;
-  updateExpiration: string;
   searchScopeFolder: string;
   searchScopeLibrary: string;
   filters: string;
@@ -110,12 +102,6 @@ export interface Messages {
   activity: string;
   activityLog: string;
   noActivity: string;
-  deletedFrom: string;
-  deletedDate: string;
-  confirmDeletePermanent: string;
-  confirmDeletePermanentMany: string;
-  confirmEmptyRecycleBin: string;
-  restoreSuccessRecycleBin: string;
   copyInProgress: string;
   copyComplete: string;
   copyFailed: string;
@@ -123,7 +109,6 @@ export interface Messages {
   bulkEditMetadataHint: string;
   leaveBlankToSkip: string;
   sensitivityLabel: string;
-  dropToMove: string;
   operationSuccess: string;
   details: string;
   emptyHint: string;
@@ -151,8 +136,6 @@ export interface Messages {
 
 const vi: Messages = {
   files: "Tệp",
-  search: "Tìm kiếm",
-  searchPlaceholder: "Tìm tệp hoặc thư mục",
   newFolder: "Thư mục mới",
   upload: "Tải lên",
   list: "Danh sách",
@@ -187,7 +170,6 @@ const vi: Messages = {
   edit: "Chỉnh sửa",
   message: "Lời nhắn",
   notify: "Gửi thông báo",
-  createLink: "Tạo liên kết",
   copyLink: "Sao chép liên kết",
   revoke: "Thu hồi",
   inherited: "Kế thừa từ thư mục cha",
@@ -204,7 +186,6 @@ const vi: Messages = {
   anyone: "Bất kỳ ai có liên kết",
   organization: "Mọi người trong tổ chức",
   specificPeople: "Người được chọn",
-  destination: "Thư mục đích",
   selectDestination: "Chọn thư mục đích. Bấm vào thư mục để đi vào trong.",
   noSubfolders: "Không có thư mục con",
   invalidDestination: "Không thể sao chép/di chuyển vào chính mục đang chọn.",
@@ -241,12 +222,8 @@ const vi: Messages = {
   checkin: "Check-in",
   discardCheckout: "Hủy check-out",
   checkinComment: "Ghi chú check-in",
-  createWord: "Tài liệu Word",
-  createExcel: "Bảng tính Excel",
-  createPowerPoint: "Trình chiếu PowerPoint",
   print: "In",
   uploadFolder: "Tải thư mục lên",
-  updateExpiration: "Cập nhật hết hạn",
   searchScopeFolder: "Thư mục hiện tại",
   searchScopeLibrary: "Toàn thư viện",
   filters: "Bộ lọc",
@@ -261,12 +238,6 @@ const vi: Messages = {
   activity: "Hoạt động",
   activityLog: "Nhật ký hoạt động",
   noActivity: "Không có hoạt động",
-  deletedFrom: "Vị trí gốc",
-  deletedDate: "Ngày xóa",
-  confirmDeletePermanent: "Xóa vĩnh viễn mục này? Không thể hoàn tác.",
-  confirmDeletePermanentMany: "Xóa vĩnh viễn các mục đã chọn? Không thể hoàn tác.",
-  confirmEmptyRecycleBin: "Xóa vĩnh viễn tất cả mục trong thùng rác hiện tại?",
-  restoreSuccessRecycleBin: "Đã khôi phục mục",
   copyInProgress: "Đang sao chép...",
   copyComplete: "Sao chép hoàn tất",
   copyFailed: "Sao chép thất bại",
@@ -274,7 +245,6 @@ const vi: Messages = {
   bulkEditMetadataHint: "Chỉ các trường có giá trị mới được cập nhật cho tất cả mục đã chọn.",
   leaveBlankToSkip: "Để trống nếu bỏ qua",
   sensitivityLabel: "Nhãn mật",
-  dropToMove: "Thả để di chuyển",
   operationSuccess: "Thao tác thành công",
   details: "Chi tiết",
   emptyHint: "Kéo thả tệp vào đây hoặc dùng Tải lên / Thư mục mới",
@@ -302,8 +272,6 @@ const vi: Messages = {
 
 const en: Messages = {
   files: "Files",
-  search: "Search",
-  searchPlaceholder: "Search files or folders",
   newFolder: "New folder",
   upload: "Upload",
   list: "List",
@@ -338,7 +306,6 @@ const en: Messages = {
   edit: "Edit",
   message: "Message",
   notify: "Notify people",
-  createLink: "Create link",
   copyLink: "Copy link",
   revoke: "Revoke",
   inherited: "Inherited from parent",
@@ -355,7 +322,6 @@ const en: Messages = {
   anyone: "Anyone with the link",
   organization: "People in the organization",
   specificPeople: "Specific people",
-  destination: "Destination folder",
   selectDestination: "Choose a destination folder. Click a folder to open it.",
   noSubfolders: "No subfolders",
   invalidDestination: "You cannot copy or move an item into itself.",
@@ -392,12 +358,8 @@ const en: Messages = {
   checkin: "Check in",
   discardCheckout: "Discard check-out",
   checkinComment: "Check-in comment",
-  createWord: "Word document",
-  createExcel: "Excel workbook",
-  createPowerPoint: "PowerPoint presentation",
   print: "Print",
   uploadFolder: "Upload folder",
-  updateExpiration: "Update expiration",
   searchScopeFolder: "Current folder",
   searchScopeLibrary: "Entire library",
   filters: "Filters",
@@ -412,12 +374,6 @@ const en: Messages = {
   activity: "Activity",
   activityLog: "Activity log",
   noActivity: "No activity recorded",
-  deletedFrom: "Original location",
-  deletedDate: "Deleted",
-  confirmDeletePermanent: "Permanently delete this item? This cannot be undone.",
-  confirmDeletePermanentMany: "Permanently delete the selected items? This cannot be undone.",
-  confirmEmptyRecycleBin: "Permanently delete all items in the current recycle bin view?",
-  restoreSuccessRecycleBin: "Item restored",
   copyInProgress: "Copying...",
   copyComplete: "Copy completed",
   copyFailed: "Copy failed",
@@ -425,7 +381,6 @@ const en: Messages = {
   bulkEditMetadataHint: "Only fields with values are applied to all selected items.",
   leaveBlankToSkip: "Leave blank to skip",
   sensitivityLabel: "Sensitivity label",
-  dropToMove: "Drop to move here",
   operationSuccess: "Operation completed",
   details: "Details",
   emptyHint: "Drag files here or use Upload / New folder",

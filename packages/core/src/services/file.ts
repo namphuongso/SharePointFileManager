@@ -1,7 +1,7 @@
 import type { GraphClient } from "../graph/client";
 import { itemUrl } from "../graph/paths";
 import type { FolderService } from "./folder";
-import type { CopyMoveOptions, FileVersion, PreviewInfo, SharePointItem } from "../types/models";
+import type { FileVersion, PreviewInfo, SharePointItem } from "../types/models";
 
 export class FileService {
   constructor(
@@ -12,26 +12,6 @@ export class FileService {
 
   get(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {
     return this.folders.get(itemId, { signal, expandListItem: true });
-  }
-
-  getMetadata(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {
-    return this.get(itemId, signal);
-  }
-
-  rename(itemId: string, name: string, signal?: AbortSignal): Promise<SharePointItem> {
-    return this.folders.rename(itemId, name, signal);
-  }
-
-  delete(itemId: string, signal?: AbortSignal): Promise<void> {
-    return this.folders.delete(itemId, signal);
-  }
-
-  copy(options: CopyMoveOptions): Promise<void> {
-    return this.folders.copy(options);
-  }
-
-  move(options: CopyMoveOptions): Promise<SharePointItem> {
-    return this.folders.move(options);
   }
 
   async download(
@@ -111,8 +91,11 @@ export class FileService {
     });
   }
 
-  async preview(itemId: string, signal?: AbortSignal): Promise<PreviewInfo> {
-    const driveId = await this.getDriveId();
-    return this.graph.post<PreviewInfo>(`${itemUrl(driveId, itemId)}/preview`, {}, { signal });
+  async preview(
+    itemId: string,
+    options?: { driveId?: string; signal?: AbortSignal },
+  ): Promise<PreviewInfo> {
+    const driveId = options?.driveId ?? (await this.getDriveId());
+    return this.graph.post<PreviewInfo>(`${itemUrl(driveId, itemId)}/preview`, {}, { signal: options?.signal });
   }
 }

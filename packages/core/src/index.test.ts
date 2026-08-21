@@ -5,13 +5,22 @@ import { GraphClient } from "./graph/client";
 import { mapDriveItem } from "./mappers/item";
 import { mapGraphPerson, mapGraphUser, mapTypedEmail, toInviteRecipient } from "./mappers/person";
 import { mapPermission } from "./mappers/permission";
+import { extractMetadataFromListItem, mapListItemFields } from "./mappers/list-item";
 import { resolveConfig } from "./config/resolve-config";
 import { DriveService, findDriveByName } from "./services/drive";
 import { SiteService } from "./services/site";
 import { siteResourcePath } from "./graph/paths";
 import { buildSearchKql } from "./services/search";
 import { ActivityService } from "./services/activity";
-import { DeltaService } from "./services/delta";
+import { ListItemService } from "./services/list-item";
+import { itemsVisibleInFolder } from "./utils/list-visible-items";
+import type { SharePointItem } from "./types/models";
+import { canPerformItemAction, isOfficeOnlineFile } from "./utils/item-actions";
+import {
+  buildSharePointDocOpenUrl,
+  isDirectFileDownloadUrl,
+  resolveItemOpenUrl,
+} from "./utils/sharepoint-open-url";
 
 describe("mapStatusToCode", () => {
   it("maps HTTP statuses", () => {
@@ -81,6 +90,46 @@ describe("mapDriveItem", () => {
   });
 });
 
+describe("list item metadata mapper", () => {
+  it("keeps custom internal names and lookup id helpers", () => {
+    const mapped = extractMetadataFromListItem({
+      id: "5",
+      fields: {
+        _CustomBusinessCode: "ABC-01",
+        DepartmentLookupId: "12",
+        CategoryStringId: "3;#Legal",
+        _ComplianceTag: "Confidential",
+        Modified: "2026-08-18T00:00:00Z",
+      },
+    });
+
+    expect(mapped.metadata).toMatchObject({
+      _CustomBusinessCode: "ABC-01",
+      DepartmentLookupId: "12",
+      CategoryStringId: "3;#Legal",
+    });
+    expect(mapped.metadata?._ComplianceTag).toBeUndefined();
+    expect(mapped.metadata?.Modified).toBeUndefined();
+  });
+
+  it("normalizes multi-value and object field payloads without dropping labels", () => {
+    const result = mapListItemFields("item-1", {
+      fields: {
+        Approvers: {
+          results: [
+            { LookupValue: "Ada Lovelace", Email: "ada@contoso.com" },
+            { displayName: "Alan Turing" },
+          ],
+        },
+        Tags: [{ Label: "Finance" }, { label: "Urgent" }],
+      },
+    });
+
+    expect(result.fields.Approvers).toBe("Ada Lovelace, Alan Turing");
+    expect(result.fields.Tags).toBe("Finance, Urgent");
+  });
+});
+
 describe("mapPermission", () => {
   it("marks inherited permissions as not removable", () => {
     const permission = mapPermission({
@@ -103,6 +152,23 @@ describe("mapPermission", () => {
     expect(permission.kind).toBe("link");
     expect(permission.canRemove).toBe(true);
     expect(permission.link?.scope).toBe("organization");
+  });
+
+  it("does not allow removing direct user/group ACL entries", () => {
+    const userPermission = mapPermission({
+      id: "p3",
+      roles: ["write"],
+      grantedToV2: { user: { id: "u1", displayName: "Ada" } },
+    });
+    const groupPermission = mapPermission({
+      id: "p4",
+      roles: ["read"],
+      grantedToV2: { group: { id: "g1", displayName: "Legal Team" } },
+    });
+    expect(userPermission.kind).toBe("user");
+    expect(groupPermission.kind).toBe("group");
+    expect(userPermission.canRemove).toBe(false);
+    expect(groupPermission.canRemove).toBe(false);
   });
 });
 
@@ -154,7 +220,18 @@ describe("GraphClient", () => {
     const graph = new GraphClient({
       baseUrl: "https://graph.microsoft.com/v1.0",
       tokenProvider: { getAccessToken: async () => "token" },
-      scopes: ["Files.Read"],
+      scopes: ["Sites.Read.All"],
+    });
+    expect(graph.apiUrl("/sites/site/drives")).toBe(
+      "https://graph.microsoft.com/v1.0/sites/site/drives",
+    );
+  });
+
+  it("normalizes a beta graphBaseUrl to v1.0", () => {
+    const graph = new GraphClient({
+      baseUrl: "https://graph.microsoft.com/beta",
+      tokenProvider: { getAccessToken: async () => "token" },
+      scopes: ["Sites.Read.All"],
     });
     expect(graph.apiUrl("/sites/site/drives")).toBe(
       "https://graph.microsoft.com/v1.0/sites/site/drives",
@@ -211,36 +288,170 @@ describe("Graph-backed contracts", () => {
     const graph = new GraphClient({
       baseUrl: "https://graph.microsoft.com/v1.0",
       tokenProvider: { getAccessToken: async () => "token" },
-      scopes: ["Files.Read"],
+      scopes: ["Sites.Read.All"],
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
     const activities = await new ActivityService(graph, async () => "drive").list("item");
-    expect(activities[0]).toMatchObject({ id: "a1", action: "edit", timestamp: "2025-01-01T00:00:00Z" });
+    expect(activities[0]).toMatchObject({ id: "a1", action: "edited", timestamp: "2025-01-01T00:00:00Z" });
     expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("/drives/drive/items/item/activities");
   });
 
-  it("restarts a delta sync when Graph invalidates a saved token", async () => {
-    let calls = 0;
+});
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+describe("ListItemService accessible library items", () => {
+  it("reads driveItem from GET /sites/{site}/lists/{list}/items", async () => {
     const fetchImpl = vi.fn(async (url: string) => {
-      calls += 1;
-      if (calls === 1) return new Response(JSON.stringify({ error: { code: "resyncRequired" } }), { status: 410 });
-      expect(url).toContain("/drives/drive/root/delta");
-      return new Response(JSON.stringify({ value: [], "@odata.deltaLink": "https://delta/new" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
+      const target = decodeURIComponent(String(url));
+      expect(target).toContain("/sites/site-a/lists/list-a/items");
+      expect(target).toContain("$expand=driveItem");
+      return jsonResponse({
+        value: [
+          {
+            id: "1",
+            driveItem: {
+              id: "folder-1",
+              name: "Thư mục webmaster",
+              folder: { childCount: 2 },
+              parentReference: { driveId: "drive-a", id: "root-id" },
+            },
+          },
+          {
+            id: "2",
+            driveItem: {
+              id: "file-xlsx",
+              name: "Workbook.xlsx",
+              file: {},
+              parentReference: { driveId: "drive-a", id: "folder-1" },
+            },
+          },
+          {
+            id: "3",
+            driveItem: {
+              id: "file-pptx",
+              name: "webmaster.pptx",
+              file: {},
+              parentReference: { driveId: "drive-a", id: "folder-1" },
+            },
+          },
+        ],
       });
     });
+
     const graph = new GraphClient({
       baseUrl: "https://graph.microsoft.com/v1.0",
       tokenProvider: { getAccessToken: async () => "token" },
-      scopes: ["Files.Read"],
+      scopes: ["Sites.Read.All"],
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    const result = await new DeltaService(graph).sync("drive", "root", { deltaLink: "https://delta/expired" });
-    expect(result.deltaLink).toBe("https://delta/new");
-    expect(calls).toBe(2);
+
+    const service = new ListItemService(graph, "site-a", async () => "drive-a", "list-a");
+    const accessible = await service.listAccessibleDriveItems();
+    const atRoot = itemsVisibleInFolder(accessible, "root");
+    expect(atRoot).toHaveLength(1);
+    expect(atRoot[0]?.name).toBe("Thư mục webmaster");
+
+    const inFolder = itemsVisibleInFolder(accessible, "folder-1");
+    expect(inFolder.map((item) => item.name).sort()).toEqual(["Workbook.xlsx", "webmaster.pptx"]);
+  });
+});
+
+describe("itemsVisibleInFolder", () => {
+  it("keeps files under their parent folder when the folder is visible", () => {
+    const folder: SharePointItem = {
+      id: "folder-1",
+      name: "Thư mục webmaster",
+      type: "folder",
+      parentId: "root-id",
+    };
+    const xlsx: SharePointItem = {
+      id: "file-xlsx",
+      name: "Workbook.xlsx",
+      type: "file",
+      parentId: "folder-1",
+    };
+    const pptx: SharePointItem = {
+      id: "file-pptx",
+      name: "webmaster.pptx",
+      type: "file",
+      parentId: "folder-1",
+    };
+    expect(itemsVisibleInFolder([folder, xlsx, pptx], "root").map((item) => item.name)).toEqual([
+      "Thư mục webmaster",
+    ]);
+    expect(
+      itemsVisibleInFolder([folder, xlsx, pptx], "folder-1")
+        .map((item) => item.name)
+        .sort(),
+    ).toEqual(["Workbook.xlsx", "webmaster.pptx"]);
+  });
+});
+
+describe("sharepoint open url", () => {
+  it("builds Doc.aspx url like SharePoint web", () => {
+    const url = buildSharePointDocOpenUrl(
+      "https://tcsvn.sharepoint.com/sites/eOfficeDev",
+      "EF579525-42FC-41A3-A66F-F7B7B6599389",
+      "Workbook.xlsx",
+    );
+    expect(url).toBe(
+      "https://tcsvn.sharepoint.com/sites/eOfficeDev/_layouts/15/Doc.aspx?sourcedoc=%7BEF579525-42FC-41A3-A66F-F7B7B6599389%7D&file=Workbook.xlsx&action=default&mobileredirect=true",
+    );
   });
 
+  it("maps openUrl from sharepointIds for office files", () => {
+    const item = mapDriveItem({
+      id: "1",
+      name: "Workbook.xlsx",
+      file: { mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+      webUrl: "https://tcsvn.sharepoint.com/sites/eOfficeDev/Shared Documents/Workbook.xlsx",
+      sharepointIds: {
+        siteUrl: "https://tcsvn.sharepoint.com/sites/eOfficeDev",
+        listItemUniqueId: "EF579525-42FC-41A3-A66F-F7B7B6599389",
+      },
+    });
+    expect(item.openUrl).toContain("/_layouts/15/Doc.aspx");
+    expect(resolveItemOpenUrl(item)).toBe(item.openUrl);
+    expect(isDirectFileDownloadUrl(item.webUrl!)).toBe(true);
+  });
+});
+
+describe("item actions", () => {
+  it("gates checkout actions from Graph checkout state", () => {
+    const free: SharePointItem = {
+      id: "1",
+      name: "Workbook.xlsx",
+      type: "file",
+      capabilities: { isCheckedOut: false },
+    };
+    const locked: SharePointItem = {
+      id: "2",
+      name: "Workbook.xlsx",
+      type: "file",
+      capabilities: { isCheckedOut: true },
+    };
+    expect(canPerformItemAction(free, "download")).toBe(true);
+    expect(canPerformItemAction(free, "checkout")).toBe(true);
+    expect(canPerformItemAction(free, "checkin")).toBe(false);
+    expect(canPerformItemAction(locked, "checkout")).toBe(false);
+    expect(canPerformItemAction(locked, "checkin")).toBe(true);
+    expect(canPerformItemAction(locked, "discardCheckout")).toBe(true);
+  });
+
+  it("detects office files by extension", () => {
+    expect(
+      isOfficeOnlineFile({ id: "1", name: "Report.xlsx", type: "file" }),
+    ).toBe(true);
+    expect(
+      isOfficeOnlineFile({ id: "2", name: "Notes.txt", type: "file" }),
+    ).toBe(false);
+  });
 });
 
 describe("findDriveByName", () => {

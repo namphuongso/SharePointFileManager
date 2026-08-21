@@ -42,7 +42,17 @@ Library không tạo `PublicClientApplication`, không `loginPopup` / `loginRedi
 
 ## State
 
-TanStack Query cache folder children, search, permissions, versions. Mutation (upload, rename, delete, copy, move, share) invalidate đúng folder/item.
+TanStack Query cache folder children (paged + infinite), accessible library items, search, permissions, versions. Mutations (upload, rename, delete, copy, move, checkout, restore) invalidate `children`, `children-infinite`, and `accessible-library-items` for the affected folder/library.
+
+## Embed model
+
+```text
+SharePointAppProvider (siteId + token + features)     ← config một lần ở app
+    └── SharePointFileManager libraryName="…"         ← từng module/route
+            └── embedded UI = command bar + file list  ← không header / shell nav
+```
+
+Standalone demo có thể truyền `config` đầy đủ + `embedded={false}` để hiện full `SharePointShell`.
 
 ## UI / Tailwind
 
@@ -52,4 +62,4 @@ Class prefix `spm-`. Host import `styles.css` đã compile. Không bắt host sc
 
 - Theme package riêng
 - Library tự MSAL login
-- Retention, sensitivity labels, check-in/out
+- Retention

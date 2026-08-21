@@ -52,8 +52,7 @@ export class PeopleService {
     const results: DirectoryPerson[] = [];
     const sources = await Promise.allSettled([
       this.searchRelevantPeople(term, signal),
-      this.searchUsersAdvanced(term, signal),
-      this.searchUsersFilter(term, signal),
+      this.searchUsers(term, signal),
       this.searchGroups(term, signal),
     ]);
 
@@ -96,6 +95,17 @@ export class PeopleService {
     return (result.value ?? []).map(mapGraphPerson).filter((person): person is DirectoryPerson => Boolean(person));
   }
 
+  /** Prefer `$search`; fall back to `$filter` when search is blocked or empty. */
+  private async searchUsers(term: string, signal?: AbortSignal): Promise<DirectoryPerson[]> {
+    try {
+      const advanced = await this.searchUsersAdvanced(term, signal);
+      if (advanced.length > 0) return advanced;
+    } catch {
+      // Fall through to $filter for tenants without advanced query.
+    }
+    return this.searchUsersFilter(term, signal);
+  }
+
   private async searchUsersAdvanced(term: string, signal?: AbortSignal): Promise<DirectoryPerson[]> {
     const escaped = escapeODataSearch(term);
     const result = await this.graph.get<GraphCollection<GraphDirectoryUser>>("/users", {
@@ -111,7 +121,6 @@ export class PeopleService {
     return (result.value ?? []).map(mapGraphUser).filter((person): person is DirectoryPerson => Boolean(person));
   }
 
-  /** Fallback when $search is blocked or not licensed in the tenant. */
   private async searchUsersFilter(term: string, signal?: AbortSignal): Promise<DirectoryPerson[]> {
     const e = escapeODataString(term);
     const filter = [

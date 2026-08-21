@@ -19,7 +19,7 @@ export class FolderService {
     const item = await this.graph.get<GraphDriveItem>(itemUrl(driveId, itemId), {
       query: {
         $select:
-          "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag",
+          "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag,sharepointIds",
         ...(expand ? { $expand: expand } : {}),
       },
       signal: options.signal,
@@ -48,7 +48,7 @@ export class FolderService {
           : {
               $top: options.top ?? 200,
               $select:
-                "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag",
+                "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag,sharepointIds",
               ...(buildExpandQuery(options.expandListItem)
                 ? { $expand: buildExpandQuery(options.expandListItem) }
                 : {}),
@@ -89,7 +89,7 @@ export class FolderService {
         : {
             $top: options.top ?? 50,
             $select:
-              "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag",
+              "id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag,sharepointIds",
             ...(buildExpandQuery(options.expandListItem)
               ? { $expand: buildExpandQuery(options.expandListItem) }
               : {}),
@@ -115,29 +115,6 @@ export class FolderService {
       items,
       nextLink: result["@odata.nextLink"],
     };
-  }
-
-  async listChildrenWithSort(
-    folderId: string,
-    sortField: import("../types/models").SortField = "name",
-    sortDirection: import("../types/models").SortDirection = "asc",
-    options: { signal?: AbortSignal } = {},
-  ): Promise<PagedResult<SharePointItem>> {
-    const result = await this.listChildren(folderId, options);
-    const dir = sortDirection === "asc" ? 1 : -1;
-    result.items.sort((a, b) => {
-      if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
-      if (sortField === "modified") {
-        const av = a.lastModifiedDateTime ?? "";
-        const bv = b.lastModifiedDateTime ?? "";
-        return av.localeCompare(bv) * dir;
-      }
-      if (sortField === "size") {
-        return ((a.size ?? 0) - (b.size ?? 0)) * dir;
-      }
-      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) * dir;
-    });
-    return result;
   }
 
   async create(parentId: string, name: string, signal?: AbortSignal): Promise<SharePointItem> {

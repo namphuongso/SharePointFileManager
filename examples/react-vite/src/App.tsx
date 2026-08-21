@@ -1,58 +1,75 @@
 import { InteractionStatus } from "@azure/msal-browser";
 import { useMsal } from "@azure/msal-react";
-import { createMsalTokenProvider, SharePointFileManager } from "@namphuongso/sharepoint-file-manager";
+import {
+  createMsalTokenProvider,
+  SharePointAppProvider,
+  SharePointFileManager,
+} from "@namphuongso/sharepoint-file-manager";
 import { useMemo } from "react";
 import "@namphuongso/sharepoint-file-manager/styles.css";
 
-const graphScopes = ["Files.ReadWrite", "Sites.ReadWrite.All", "User.Read.All", "People.Read", "Directory.Read.All"];
-
+/**
+ * Demo — chỉ 2 chỗ:
+ * 1) SharePointAppProvider + config (siteUrl + token)
+ * 2) SharePointFileManager libraryName
+ */
 export function App() {
   const { instance, accounts, inProgress } = useMsal();
   const account = accounts[0];
   const siteId = import.meta.env.VITE_SITE_ID as string | undefined;
-  const driveId = import.meta.env.VITE_DRIVE_ID as string | undefined;
+  const siteUrl = import.meta.env.VITE_SITE_URL as string | undefined;
+  const libraryName = (import.meta.env.VITE_LIBRARY_NAME as string | undefined) || "Documents";
+
+  const tokenProvider = useMemo(() => {
+    if (!account) return undefined;
+    return createMsalTokenProvider({ instance, account });
+  }, [instance, account]);
 
   if (inProgress !== InteractionStatus.None) {
     return <p>Loading Microsoft session...</p>;
   }
 
-  if (!account) {
+  if (!account || !tokenProvider) {
     return (
       <main style={{ minHeight: "100vh", background: "#f5f5f5" }}>
         <h1>SharePoint File Manager</h1>
-        <button
-          type="button"
-          onClick={() => instance.loginRedirect({ scopes: graphScopes })}
-        >
+        <button type="button" onClick={() => instance.loginRedirect({ scopes: ["Files.ReadWrite", "Sites.ReadWrite.All"] })}>
           Sign in with Microsoft
         </button>
       </main>
     );
   }
 
-  if (!siteId) {
-    return <p style={{ padding: 24 }}>Set VITE_SITE_ID (and optional VITE_DRIVE_ID) in .env.local</p>;
+  if (!siteId && !siteUrl) {
+    return (
+      <p style={{ padding: 24 }}>
+        Set <code>VITE_SITE_ID</code> or <code>VITE_SITE_URL</code> (and optional{" "}
+        <code>VITE_LIBRARY_NAME</code>) in .env.local
+      </p>
+    );
   }
 
-  const tokenProvider = useMemo(
-    () => createMsalTokenProvider({ instance, account }),
-    [instance, account],
-  );
-
-  const config = useMemo(
-    () => ({ siteId, driveId, tokenProvider }),
-    [siteId, driveId, tokenProvider],
-  );
-
   return (
-    <main style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <div style={{ marginBottom: 12 }}>
-        Signed in as {account.username}{" "}
-        <button type="button" onClick={() => instance.logoutRedirect()}>
-          Sign out
-        </button>
-      </div>
-      <SharePointFileManager locale="vi-VN" config={config} />
-    </main>
+    <SharePointAppProvider
+      locale="vi-VN"
+      config={{
+        siteId,
+        siteUrl,
+        tokenProvider,
+      }}
+    >
+      <main style={{ minHeight: "100vh", background: "#f5f5f5", display: "flex", flexDirection: "column" }}>
+        <div style={{ marginBottom: 12, padding: 12 }}>
+          Signed in as {account.username}{" "}
+          <button type="button" onClick={() => instance.logoutRedirect()}>
+            Sign out
+          </button>
+          <span style={{ marginLeft: 12, color: "#666" }}>library: {libraryName}</span>
+        </div>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <SharePointFileManager libraryName={libraryName} className="h-full" />
+        </div>
+      </main>
+    </SharePointAppProvider>
   );
 }

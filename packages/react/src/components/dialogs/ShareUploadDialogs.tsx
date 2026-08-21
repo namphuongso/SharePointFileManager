@@ -101,7 +101,7 @@ export function ShareDialog({
   createdLinkUrl?: string;
   onClose: () => void;
   onInvite: (recipients: InviteRecipient[], role: "read" | "write", message: string, notify: boolean) => void;
-  onCreateLink: (scope: "anonymous" | "organization" | "users", type: "view" | "edit", expiration?: string) => void;
+  onCreateLink: (scope: "anonymous" | "organization", type: "view" | "edit", expiration?: string) => void;
 }) {
   const [selected, setSelected] = useState<DirectoryPerson[]>([]);
   const [role, setRole] = useState<"read" | "write">("read");

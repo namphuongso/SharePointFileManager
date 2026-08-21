@@ -1,5 +1,8 @@
 import { extractMetadataFromListItem } from "../mappers/list-item";
+import { resolveGraphItemOpenUrl, type GraphSharePointIds } from "../utils/sharepoint-open-url";
 import type { SharePointItem, UserInfo } from "../types/models";
+
+export type { GraphSharePointIds };
 
 export interface GraphIdentitySet {
   user?: { id?: string; displayName?: string; email?: string };
@@ -16,6 +19,7 @@ export interface GraphDriveItem {
   eTag?: string;
   file?: { mimeType?: string };
   folder?: { childCount?: number };
+  sharepointIds?: GraphSharePointIds;
   createdBy?: GraphIdentitySet;
   lastModifiedBy?: GraphIdentitySet;
   parentReference?: { id?: string; driveId?: string; path?: string };
@@ -62,6 +66,7 @@ export function mapDriveItem(item: GraphDriveItem, fallbackDriveId?: string): Sh
     createdBy: mapUser(item.createdBy),
     lastModifiedBy: mapUser(item.lastModifiedBy),
     webUrl: item.webUrl,
+    openUrl: resolveGraphItemOpenUrl(item),
     mimeType: item.file?.mimeType,
     parentId: item.parentReference?.id,
     driveId: item.parentReference?.driveId ?? fallbackDriveId,

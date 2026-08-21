@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import {
   Button as FluentButton,
   Dialog as FluentDialog,
@@ -14,22 +14,6 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { DismissRegular } from "@fluentui/react-icons";
-
-export function FolderIcon({ className = "spm-h-5 spm-w-5" }: { className?: string }) {
-  return (
-    <svg className={`${className} spm-text-[#ffb900]`} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M10 4l2 2h8a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h6z" />
-    </svg>
-  );
-}
-
-export function FileIcon() {
-  return (
-    <svg className="spm-h-5 spm-w-5 spm-text-slate-500" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm1 7V3.5L19.5 9H15z" />
-    </svg>
-  );
-}
 
 export function Dialog({
   title,
@@ -90,38 +74,6 @@ export function Button({
   );
 }
 
-export function CommandButton({
-  children,
-  onClick,
-  disabled,
-  primary,
-  title,
-  icon,
-  className = "",
-}: {
-  children?: ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-  primary?: boolean;
-  title?: string;
-  icon?: ReactElement;
-  className?: string;
-}) {
-  return (
-    <FluentButton
-      appearance={primary ? "primary" : "subtle"}
-      disabled={disabled}
-      onClick={onClick}
-      title={title}
-      icon={icon}
-      className={className}
-      size="medium"
-    >
-      {children}
-    </FluentButton>
-  );
-}
-
 export function TextField({
   label,
   value,
@@ -147,14 +99,22 @@ export function TextField({
   );
 }
 
-export function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorBanner({
+  message,
+  onRetry,
+  retryLabel = "Retry",
+}: {
+  message: string;
+  onRetry?: () => void;
+  retryLabel?: string;
+}) {
   return (
     <MessageBar intent="error" className="spm-mx-3 spm-my-2">
       <MessageBarBody>
         {message}
         {onRetry ? (
           <FluentButton appearance="transparent" size="small" onClick={onRetry} className="spm-ml-2">
-            Retry
+            {retryLabel}
           </FluentButton>
         ) : null}
       </MessageBarBody>

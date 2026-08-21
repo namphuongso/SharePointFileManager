@@ -21,7 +21,6 @@ export const DEFAULT_FEATURES: Required<FeatureConfig> = {
   openInSharePoint: true,
   properties: true,
   checkout: true,
-  createOfficeFile: true,
   globalSearch: true,
   metadata: true,
   activityLog: true,
@@ -29,9 +28,6 @@ export const DEFAULT_FEATURES: Required<FeatureConfig> = {
   dragDropMove: true,
   bulkMetadata: true,
   copyProgress: true,
-  enableDeltaSync: false,
-  enableAnalytics: false,
-  enableActivities: true,
 };
 
 export function resolveConfig(config: SharePointConfig): ResolvedSharePointConfig {
@@ -44,16 +40,10 @@ export function resolveConfig(config: SharePointConfig): ResolvedSharePointConfi
 
   return {
     ...config,
+    siteId: config.siteId,
     rootItemId: config.rootItemId ?? "root",
     scopes: config.scopes ?? [...DEFAULT_GRAPH_SCOPES],
     graphBaseUrl: config.graphBaseUrl ?? "https://graph.microsoft.com/v1.0",
     features: { ...DEFAULT_FEATURES, ...config.features },
   };
-}
-
-export function isFeatureEnabled(
-  config: ResolvedSharePointConfig,
-  feature: keyof FeatureConfig,
-): boolean {
-  return config.features[feature] !== false;
 }

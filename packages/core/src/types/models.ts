@@ -18,8 +18,8 @@ export interface DirectoryPerson {
 export type SharePointItemType = "file" | "folder";
 
 /**
- * Domain model for UI. Values like canEdit/canDelete are hints from Graph,
- * not an application permission database.
+ * Domain model for UI. `capabilities` only carries checkout state Graph actually returns;
+ * host FeatureConfig gates CRUD/share actions.
  */
 export interface SharePointItem {
   id: string;
@@ -31,6 +31,8 @@ export interface SharePointItem {
   createdBy?: UserInfo;
   lastModifiedBy?: UserInfo;
   webUrl?: string;
+  /** Browser URL that opens like SharePoint web (Doc.aspx for Office files). */
+  openUrl?: string;
   mimeType?: string;
   parentId?: string;
   driveId?: string;
@@ -48,27 +50,11 @@ export interface SharePointItem {
   sensitivityLabel?: string;
 }
 
+/** Graph-derived checkout state only (v1.0 publication / listItem fields). */
 export interface ItemCapabilities {
-  canRead?: boolean;
-  canRename: boolean;
-  canDelete: boolean;
-  canDownload: boolean;
-  canMove: boolean;
-  canCopy: boolean;
-  canShare: boolean;
-  canCheckout: boolean;
-  canCheckin: boolean;
-  canDiscardCheckout: boolean;
-  canManagePermissions?: boolean;
-  canViewVersions?: boolean;
-  canRestore?: boolean;
-  canPreview?: boolean;
   isCheckedOut: boolean;
-  checkedOutByMe: boolean;
   checkedOutBy?: UserInfo;
 }
-
-export type OfficeFileKind = "word" | "excel" | "powerpoint";
 
 export type SortField = "name" | "modified" | "size" | "created";
 export type SortDirection = "asc" | "desc";
@@ -76,7 +62,6 @@ export type SortDirection = "asc" | "desc";
 export interface PagedResult<T> {
   items: T[];
   nextLink?: string;
-  hasMore?: boolean;
 }
 
 export interface DriveInfo {
@@ -108,7 +93,11 @@ export type ShareRole = "read" | "write";
 
 export type ShareLinkType = "view" | "edit";
 
+/** Scope on returned permission links (may include `users`). */
 export type ShareScope = "anonymous" | "organization" | "users";
+
+/** Scopes accepted by Graph v1.0 `createLink`. Specific people use `invite` instead. */
+export type CreateLinkScope = "anonymous" | "organization";
 
 export type PermissionKind = "user" | "group" | "link" | "siteGroup" | "unknown";
 
@@ -161,7 +150,7 @@ export interface InviteOptions {
 
 export interface CreateLinkOptions {
   type: ShareLinkType;
-  scope: ShareScope;
+  scope: CreateLinkScope;
   expirationDateTime?: string;
 }
 
@@ -259,7 +248,6 @@ export interface FeatureConfig {
   openInSharePoint?: boolean;
   properties?: boolean;
   checkout?: boolean;
-  createOfficeFile?: boolean;
   globalSearch?: boolean;
   metadata?: boolean;
   activityLog?: boolean;
@@ -267,9 +255,6 @@ export interface FeatureConfig {
   dragDropMove?: boolean;
   bulkMetadata?: boolean;
   copyProgress?: boolean;
-  enableDeltaSync?: boolean;
-  enableAnalytics?: boolean;
-  enableActivities?: boolean;
 }
 
 export type NotifyType = "success" | "error" | "info";
@@ -279,21 +264,40 @@ export interface NotifyPayload {
   message: string;
 }
 
-export interface SharePointConfig {
-  siteId: string;
-  driveId?: string;
-  /** Resolve drive via GET /sites/{siteId}/lists/{listId}/drive. */
-  listId?: string;
-  /** Resolve drive by live Graph name, e.g. "Documents" or "ISO Documents". */
-  libraryName?: string;
-  rootItemId?: string;
+/**
+ * App-level SharePoint settings configured once by the host (site + auth + features).
+ * Pass `siteId` or `siteUrl` (`SharePointAppProvider` resolves URL → id).
+ * Per-route/module usage merges a library target via `createSharePointConfig`.
+ */
+export interface SharePointAppConfig {
+  /** Graph site id. Optional when `siteUrl` is set — resolved inside `SharePointAppProvider`. */
+  siteId?: string;
+  /** SharePoint web URL, e.g. https://contoso.sharepoint.com/sites/eOffice */
+  siteUrl?: string;
   scopes?: string[];
   graphBaseUrl?: string;
   tokenProvider: import("../auth/token-provider").TokenProvider;
   features?: FeatureConfig;
 }
 
+/** App config after siteId is known (ready to merge with a library target). */
+export type ResolvedSharePointAppConfig = SharePointAppConfig & { siteId: string };
+
+/** Per-feature/route targeting: which library (and optional folder) to show. */
+export interface SharePointLibraryTarget {
+  /** Resolve drive by live Graph name, e.g. "eDocumentTest" or "Documents". */
+  libraryName?: string;
+  /** Resolve drive via GET /sites/{siteId}/lists/{listId}/drive. */
+  listId?: string;
+  driveId?: string;
+  /** Starting folder drive item id; default "root". */
+  rootItemId?: string;
+}
+
+export interface SharePointConfig extends SharePointAppConfig, SharePointLibraryTarget {}
+
 export interface ResolvedSharePointConfig extends SharePointConfig {
+  siteId: string;
   rootItemId: string;
   scopes: string[];
   graphBaseUrl: string;

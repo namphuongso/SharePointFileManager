@@ -3,17 +3,18 @@ import type {
   ConflictBehavior,
   CopyOperationProgress,
   NotifyPayload,
-  OfficeFileKind,
   PreviewInfo,
   SharePointConfig,
   SharePointItem,
+  SharePointLibraryTarget,
   SortDirection,
   SortField,
   SearchScope,
   SearchFilters,
 } from "@namphuongso/sharepoint-file-manager-core";
-import { decodeLibraryPage } from "@namphuongso/sharepoint-file-manager-core";
+import { decodeLibraryPage, canPerformItemAction, resolveItemOpenUrl, isDirectFileDownloadUrl, itemsVisibleInFolder } from "@namphuongso/sharepoint-file-manager-core";
 import { SharePointProvider } from "../provider/SharePointProvider";
+import { useOptionalSharePointApp } from "../provider/SharePointAppProvider";
 import { useSharePoint } from "../provider/context";
 import {
   getErrorMessage,
@@ -21,7 +22,6 @@ import {
   useCopyItem,
   useCreateFolder,
   useCreateLink,
-  useCreateOfficeFile,
   useDeleteItem,
   useDownloadFile,
   useDownloadVersion,
@@ -38,6 +38,7 @@ import {
   useRenameItem,
   useRestoreVersion,
   useSearchItems,
+  useAccessibleLibraryItems,
   useUpdatePermission,
   useUpdateListItemFields,
   useBulkUpdateListItemFields,
@@ -55,7 +56,7 @@ import { EmptyState } from "./EmptyState";
 import { LibrarySkeleton } from "./LibrarySkeleton";
 import { CopyMoveDialog, CreateFolderDialog, DeleteDialog, RenameDialog, CheckinDialog } from "./dialogs/BasicDialogs";
 import { ShareDialog, UploadDialog } from "./dialogs/ShareUploadDialogs";
-import type { SelectionAction } from "./SelectionToolbar";
+import type { SelectionAction } from "../types/selection-action";
 import { ManageAccessDialog, PreviewDialog, PropertiesDialog, VersionHistoryDialog } from "./dialogs/AccessDialogs";
 import { Button, ErrorBanner } from "./ui";
 import { FilterPanel } from "./FilterPanel";
@@ -75,7 +76,7 @@ import {
   Text,
   tokens,
 } from "@fluentui/react-components";
-import { FolderRegular, MoreHorizontalRegular } from "@fluentui/react-icons";
+import { FolderRegular, DocumentRegular, HomeRegular, MoreHorizontalRegular } from "@fluentui/react-icons";
 import {
   loadColumnSettings,
   saveColumnSettings,
@@ -83,37 +84,103 @@ import {
   type ColumnVisibilitySettings,
 } from "../utils/column-settings";
 import type { Messages } from "../i18n/messages";
+import {
+  SharePointShell,
+  type SharePointShellHeaderConfig,
+  type SharePointShellNavigationItem,
+} from "./SharePointShell";
 
 const DRAG_MIME = "application/x-spm-items";
 
-export interface SharePointFileManagerProps {
-  config: SharePointConfig;
+export interface SharePointFileManagerProps extends SharePointLibraryTarget {
+  /**
+   * Full Graph config. Optional when inside `SharePointAppProvider` —
+   * then pass `libraryName` / `listId` / `driveId` instead.
+   */
+  config?: SharePointConfig;
   locale?: string;
   view?: "list" | "compact" | "grid";
+  viewModes?: Array<"list" | "compact" | "grid">;
   className?: string;
   title?: string;
   messages?: Partial<Messages>;
   onNotify?: (payload: NotifyPayload) => void;
   theme?: "light" | "dark" | "system";
   density?: "compact" | "comfortable";
+  /**
+   * Feature/module embed mode: only the file browser (command bar + list/grid).
+   * Hides SharePointShell header and side navigation unless overridden.
+   * Defaults to `true` when using app-provider + library target (no full shell).
+   */
   embedded?: boolean;
   showHeader?: boolean;
   showNavigation?: boolean;
   showBreadcrumb?: boolean;
+  shellHeader?: SharePointShellHeaderConfig;
+  navigationItems?: SharePointShellNavigationItem[];
+  activeNavigationKey?: string;
+  onNavigationChange?: (key: string) => void;
 }
 
 export function SharePointFileManager(props: SharePointFileManagerProps) {
+  const app = useOptionalSharePointApp();
+  const target: SharePointLibraryTarget = {
+    libraryName: props.libraryName,
+    listId: props.listId,
+    driveId: props.driveId,
+    rootItemId: props.rootItemId,
+  };
+  const hasTarget = Boolean(target.libraryName || target.listId || target.driveId || target.rootItemId);
+
+  if (!props.config && app && app.status !== "ready") {
+    if (app.status === "error") {
+      return (
+        <p style={{ padding: 16, color: "#616161", fontSize: 14 }}>
+          Không tải được cấu hình SharePoint. Kiểm tra `siteUrl` / `siteId` và quyền Graph.
+        </p>
+      );
+    }
+    return <p style={{ padding: 16, color: "#616161", fontSize: 14 }}>Đang tải cấu hình SharePoint…</p>;
+  }
+
+  const config =
+    props.config ?? (app?.status === "ready" && app.appConfig ? app.createConfig(target) : undefined);
+
+  if (!config) {
+    throw new Error(
+      "SharePointFileManager requires `config`, or `libraryName`/`listId`/`driveId` inside SharePointAppProvider",
+    );
+  }
+
+  const embedded = props.embedded ?? (Boolean(app) && !props.config);
+  const locale = props.locale ?? app?.locale;
+  const messages = props.messages ?? app?.messages;
+  const onNotify = props.onNotify ?? app?.onNotify;
+
   return (
     <SharePointProvider
-      config={props.config}
-      locale={props.locale}
-      messages={props.messages}
-      onNotify={props.onNotify}
+      config={hasTarget && props.config ? { ...props.config, ...target } : config}
+      locale={locale}
+      messages={messages}
+      onNotify={onNotify}
       theme={props.theme}
       density={props.density}
-      embedded={props.embedded}
+      embedded={embedded}
     >
-      <FileManagerShell initialView={props.view ?? "list"} className={props.className} title={props.title} density={props.density ?? "comfortable"} />
+      <FileManagerShell
+        initialView={props.view ?? "list"}
+        allowedViews={props.viewModes ?? ["list", "compact", "grid"]}
+        className={props.className}
+        title={props.title}
+        density={props.density ?? "comfortable"}
+        shellHeader={props.shellHeader}
+        navigationItems={props.navigationItems}
+        activeNavigationKey={props.activeNavigationKey}
+        onNavigationChange={props.onNavigationChange}
+        showHeader={props.showHeader ?? !embedded}
+        showNavigation={props.showNavigation ?? !embedded}
+        showBreadcrumb={props.showBreadcrumb}
+      />
     </SharePointProvider>
   );
 }
@@ -125,14 +192,30 @@ interface Crumb {
 
 function FileManagerShell({
   initialView,
+  allowedViews,
   className,
   title,
   density,
+  shellHeader,
+  navigationItems,
+  activeNavigationKey,
+  onNavigationChange,
+  showHeader = true,
+  showNavigation = true,
+  showBreadcrumb,
 }: {
   initialView: "list" | "compact" | "grid";
+  allowedViews: Array<"list" | "compact" | "grid">;
   className?: string;
   title?: string;
   density: "compact" | "comfortable";
+  shellHeader?: SharePointShellHeaderConfig;
+  navigationItems?: SharePointShellNavigationItem[];
+  activeNavigationKey?: string;
+  onNavigationChange?: (key: string) => void;
+  showHeader?: boolean;
+  showNavigation?: boolean;
+  showBreadcrumb?: boolean;
 }) {
   const { client, locale, messages } = useSharePoint();
   const features = client.config.features;
@@ -214,6 +297,15 @@ function FileManagerShell({
   );
   const [sortField, setSortField] = useState<SortField>("name");
   const listColumnsQuery = useListColumns();
+  const childrenLoaded = useInfiniteListing
+    ? infiniteChildrenQuery.isSuccess
+    : childrenQuery.isSuccess;
+  const childrenEmpty = useInfiniteListing
+    ? (infiniteChildrenQuery.data?.pages.flatMap((page) => page.items) ?? []).length === 0
+    : (childrenQuery.data?.items ?? []).length === 0;
+  const accessibleLibraryQuery = useAccessibleLibraryItems(
+    !isSearching && childrenLoaded && childrenEmpty,
+  );
   const allMetadataColumns = listColumnsQuery.data ?? [];
   const visibleMetadataColumns = useMemo(() => {
     const names = columnSettings.metadataColumnNames;
@@ -276,8 +368,16 @@ function FileManagerShell({
       const base = searchQuery.data?.items ?? [];
       return [...base, ...searchExtraItems];
     }
-    return folderItems;
-  }, [folderItems, isSearching, searchExtraItems, searchQuery.data]);
+    if (folderItems.length > 0) return folderItems;
+    return itemsVisibleInFolder(accessibleLibraryQuery.data ?? [], currentFolderId);
+  }, [
+    currentFolderId,
+    folderItems,
+    isSearching,
+    searchExtraItems,
+    searchQuery.data,
+    accessibleLibraryQuery.data,
+  ]);
 
   const sortedItems = useMemo(() => {
     const dir = sortDirection === "asc" ? 1 : -1;
@@ -313,7 +413,6 @@ function FileManagerShell({
   const downloadFile = useDownloadFile();
   const downloadVersion = useDownloadVersion();
   const checkoutMutation = useCheckout(currentFolderId);
-  const createOfficeFile = useCreateOfficeFile(currentFolderId);
   const invite = useInvite(activeItem?.id ?? "");
   const accessInvite = useInvite(dialog?.type === "access" ? dialog.item.id : "");
   const createLink = useCreateLink(activeItem?.id ?? "");
@@ -351,11 +450,14 @@ function FileManagerShell({
     emitNotify({ type: "success", message });
   }
 
+  const shouldLoadListFallback = !isSearching && childrenLoaded && childrenEmpty;
   const loading = isSearching
     ? searchQuery.isLoading
     : useInfiniteListing
-      ? infiniteChildrenQuery.isLoading
-      : childrenQuery.isLoading;
+      ? infiniteChildrenQuery.isLoading ||
+        (shouldLoadListFallback && accessibleLibraryQuery.isLoading)
+      : childrenQuery.isLoading ||
+        (shouldLoadListFallback && accessibleLibraryQuery.isLoading);
   const error = isSearching
     ? searchQuery.error
     : useInfiniteListing
@@ -376,9 +478,10 @@ function FileManagerShell({
     }
     if (useInfiniteListing) {
       void infiniteChildrenQuery.refetch();
-      return;
+    } else {
+      void childrenQuery.refetch();
     }
-    void childrenQuery.refetch();
+    void accessibleLibraryQuery.refetch();
   }
 
   async function loadMoreSearch() {
@@ -453,8 +556,26 @@ function FileManagerShell({
       setQuery("");
       return;
     }
-    if (item.webUrl) {
-      window.open(item.webUrl, "_blank", "noopener,noreferrer");
+    void openItemInSharePoint(item);
+  }
+
+  /** Same as SharePoint web UI: Doc.aspx for Office files, webUrl for folders. */
+  async function openItemInSharePoint(item: SharePointItem) {
+    setActionError(undefined);
+    try {
+      let url = resolveItemOpenUrl(item)?.trim();
+      const needsFreshMetadata = !url || (url && isDirectFileDownloadUrl(url) && !item.openUrl);
+      if (needsFreshMetadata) {
+        const fresh = await client.files.get(item.id);
+        url = resolveItemOpenUrl(fresh)?.trim();
+      }
+      if (!url) {
+        reportError(new Error(messages.notFound));
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (caught) {
+      reportError(caught);
     }
   }
 
@@ -498,9 +619,7 @@ function FileManagerShell({
   }
 
   function openInSharePoint(item: SharePointItem) {
-    if (item.webUrl) {
-      window.open(item.webUrl, "_blank", "noopener,noreferrer");
-    }
+    void openItemInSharePoint(item);
   }
 
   async function bulkDownload(targetItems: SharePointItem[]) {
@@ -537,7 +656,7 @@ function FileManagerShell({
       if (action === "download") await downloadFile.mutateAsync(item);
       if (action === "preview") {
         setDialog({ type: "preview", item });
-        setPreview(await client.files.preview(item.id));
+        setPreview(await client.files.preview(item.id, { driveId: item.driveId }));
       }
       if (action === "rename") {
         if (features.rename) setInlineRenameId(item.id);
@@ -663,15 +782,6 @@ function FileManagerShell({
     }
   }
 
-  async function createOffice(kind: OfficeFileKind) {
-    setActionError(undefined);
-    try {
-      await createOfficeFile.mutateAsync(kind);
-    } catch (caught) {
-      setActionError(getErrorMessage(caught, messages));
-    }
-  }
-
   const copyMoveItems = dialog?.type === "copy" || dialog?.type === "move" ? dialog.items : [];
   const allSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedIds.includes(item.id));
 
@@ -701,27 +811,48 @@ function FileManagerShell({
   const chromeTitle = crumbs.length > 1
     ? crumbs[crumbs.length - 1]?.name ?? title ?? messages.files
     : title || messages.files;
+  const defaultNavigationItems: SharePointShellNavigationItem[] = [
+    { key: "home", label: messages.files, icon: <HomeRegular /> },
+    { key: "documents", label: messages.allDocuments, icon: <DocumentRegular /> },
+  ];
+  const shellHeaderConfig: SharePointShellHeaderConfig = {
+    appName: title ?? "Document Library",
+    showSearch: true,
+    showUserMenu: true,
+    ...shellHeader,
+  };
+  const shellNavigationItems = navigationItems?.length ? navigationItems : defaultNavigationItems;
+  const currentNavigationKey = activeNavigationKey ?? shellNavigationItems[0]?.key;
 
   return (
-    <div
-      ref={dropRef}
-      className={`spm-root spm-relative ${className ?? ""}`}
-      style={{ borderColor: "var(--colorNeutralStroke2, #edebe9)" }}
-      onDragEnter={(event) => {
-        if (features.upload && event.dataTransfer.types.includes("Files")) setIsDragOver(true);
-      }}
-      onDragLeave={(event) => {
-        if (event.currentTarget === event.target) setIsDragOver(false);
-      }}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => {
-        event.preventDefault();
-        setIsDragOver(false);
-        if (features.upload && event.dataTransfer.files.length) {
-          void handleUpload(event.dataTransfer.files).catch((caught) => reportError(caught));
-        }
-      }}
+    <SharePointShell
+      header={shellHeaderConfig}
+      navigationItems={shellNavigationItems}
+      activeNavigationKey={currentNavigationKey}
+      showHeader={showHeader}
+      showNavigation={showNavigation}
+      onNavigationChange={onNavigationChange}
+      onHeaderSearch={(value) => setQuery(value)}
     >
+      <div
+        ref={dropRef}
+        className={`spm-root spm-relative ${className ?? ""}`}
+        style={{ borderColor: "var(--colorNeutralStroke2, #edebe9)" }}
+        onDragEnter={(event) => {
+          if (features.upload && event.dataTransfer.types.includes("Files")) setIsDragOver(true);
+        }}
+        onDragLeave={(event) => {
+          if (event.currentTarget === event.target) setIsDragOver(false);
+        }}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          setIsDragOver(false);
+          if (features.upload && event.dataTransfer.files.length) {
+            void handleUpload(event.dataTransfer.files).catch((caught) => reportError(caught));
+          }
+        }}
+      >
       {isDragOver && features.upload ? (
         <div className="spm-drop-overlay">
           <span className="spm-text-sm spm-font-medium spm-text-sp-primary">{messages.dropFilesHere}</span>
@@ -754,12 +885,10 @@ function FileManagerShell({
           showColumnChooser={showColumnChooser}
           detailsOpen={detailsOpen}
           typeFilter={typeFilter}
-          createOfficePending={createOfficeFile.isPending}
           onViewChange={setView}
           onNewFolder={() => setDialog({ type: "createFolder" })}
           onUpload={() => setDialog({ type: "upload" })}
           onUploadFolder={() => folderUploadRef.current?.click()}
-          onCreateOffice={(kind) => void createOffice(kind)}
           onRefresh={refreshListing}
           onClearSelection={() => setSelectedIds([])}
           onSelectionAction={handleSelectionAction}
@@ -769,6 +898,7 @@ function FileManagerShell({
           onToggleColumnChooser={() => setShowColumnChooser((current) => !current)}
           onToggleDetails={() => setDetailsOpen((current) => !current)}
           onTypeFilterChange={setTypeFilter}
+          viewModes={allowedViews}
         />
         <ColumnChooser
           open={showColumnChooser && (view === "list" || view === "compact")}
@@ -798,12 +928,13 @@ function FileManagerShell({
         }}
       />
 
-      <nav
-        className="spm-breadcrumb-bar"
-        style={{
-          background: tokens.colorNeutralBackground1,
-        }}
-      >
+      {showBreadcrumb !== false ? (
+        <nav
+          className="spm-breadcrumb-bar"
+          style={{
+            background: tokens.colorNeutralBackground1,
+          }}
+        >
         <Breadcrumb aria-label="Folder navigation">
             {visibleCrumbs.map((crumb, visibleIndex) => {
               if (hiddenCrumbs.length > 0 && visibleIndex === 1) {
@@ -870,11 +1001,12 @@ function FileManagerShell({
             {visibleItems.length} {messages.resultCount}
           </Text>
         ) : null}
-      </nav>
+        </nav>
+      ) : null}
 
       {actionError ? <ErrorBanner message={actionError} /> : null}
       {error ? (
-        <ErrorBanner message={getErrorMessage(error, messages)} onRetry={refreshListing} />
+        <ErrorBanner message={getErrorMessage(error, messages)} onRetry={refreshListing} retryLabel={messages.retry} />
       ) : null}
 
       {isSearching && searchNextLink ? (
@@ -967,17 +1099,25 @@ function FileManagerShell({
               onClose={() => setDetailsOpen(false)}
               onOpenProperties={() => setDialog({ type: "properties", item: detailsItem })}
               onPreview={
-                detailsItem.type === "file" && features.preview
+                detailsItem.type === "file" &&
+                features.preview &&
+                canPerformItemAction(detailsItem, "preview")
                   ? () => void runAction("preview", detailsItem)
                   : undefined
               }
-              onShare={features.share ? () => setDialog({ type: "share", item: detailsItem }) : undefined}
+              onShare={
+                features.share && canPerformItemAction(detailsItem, "share")
+                  ? () => setDialog({ type: "share", item: detailsItem })
+                  : undefined
+              }
               permissions={detailsPermissionsQuery.data}
               permissionsLoading={detailsPermissionsQuery.isLoading}
               activities={detailsActivitiesQuery.data}
               activitiesLoading={detailsActivitiesQuery.isLoading}
               onOpenManageAccess={
-                features.manageAccess ? () => setDialog({ type: "access", item: detailsItem }) : undefined
+                features.manageAccess && canPerformItemAction(detailsItem, "manageAccess")
+                  ? () => setDialog({ type: "access", item: detailsItem })
+                  : undefined
               }
               onOpenActivity={
                 features.activityLog ? () => setDialog({ type: "activity", item: detailsItem }) : undefined
@@ -1316,6 +1456,7 @@ function FileManagerShell({
           );
         }}
       />
-    </div>
+      </div>
+    </SharePointShell>
   );
 }

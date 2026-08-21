@@ -2,8 +2,6 @@ import type { GraphClient } from "../graph/client";
 import { siteResourcePath } from "../graph/paths";
 import type { GraphCollection } from "../mappers/item";
 import type { SharePointListInfo, SiteInfo } from "../types/models";
-import type { DriveInfo } from "../types/models";
-import { DriveService } from "./drive";
 
 interface GraphSite {
   id?: string;
@@ -113,24 +111,6 @@ export class SiteService {
     const site = await this.graph.get<GraphSite>(siteResourcePath(siteId), { signal });
     if (!site.id) throw new Error("SharePoint site was not returned by Microsoft Graph");
     return { id: site.id, name: site.name, displayName: site.displayName, webUrl: site.webUrl };
-  }
-
-  async getRoot(signal?: AbortSignal): Promise<SiteInfo> {
-    return this.get("root", signal);
-  }
-
-  async getByPath(hostname: string, relativePath: string, signal?: AbortSignal): Promise<SiteInfo> {
-    const path = relativePath.startsWith("/") ? relativePath : `/${relativePath}`;
-    return this.getByUrl(`https://${hostname}${path}`, signal);
-  }
-
-  async listDrives(siteId: string, signal?: AbortSignal): Promise<DriveInfo[]> {
-    return new DriveService(this.graph, siteId).listDrives(signal);
-  }
-
-  async listSubsites(siteId: string, signal?: AbortSignal): Promise<SiteInfo[]> {
-    const result = await this.graph.get<GraphCollection<GraphSite>>(siteResourcePath(siteId, "sites"), { signal });
-    return (result.value ?? []).filter((s): s is GraphSite & { id: string } => Boolean(s.id)).map((s) => ({ id: s.id, name: s.name, displayName: s.displayName, webUrl: s.webUrl }));
   }
 
   async listLists(siteId: string, signal?: AbortSignal): Promise<SharePointListInfo[]> {

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import {
   type FeatureConfig,
   type SharePointItem,
+  canPerformItemAction,
 } from "@namphuongso/sharepoint-file-manager-core";
 import {
   MenuDivider,
@@ -63,30 +64,8 @@ const ACTION_FEATURE: Record<FileAction, keyof FeatureConfig | undefined> = {
   activity: "activityLog",
 };
 
-function canShowAction(item: SharePointItem, action: FileAction): boolean {
-  const checkedOut = item.capabilities?.isCheckedOut === true;
-  switch (action) {
-    case "rename":
-      return item.capabilities?.canRename !== false;
-    case "delete":
-      return item.capabilities?.canDelete !== false;
-    case "download":
-      return item.capabilities?.canDownload !== false;
-    case "move":
-      return item.capabilities?.canMove !== false;
-    case "copy":
-      return item.capabilities?.canCopy !== false;
-    case "share":
-      return item.capabilities?.canShare !== false;
-    case "checkout":
-      return item.type === "file" && !checkedOut && item.capabilities?.canCheckout !== false;
-    case "checkin":
-      return item.type === "file" && checkedOut && item.capabilities?.canCheckin !== false;
-    case "discardCheckout":
-      return item.type === "file" && checkedOut && item.capabilities?.canDiscardCheckout !== false;
-    default:
-      return true;
-  }
+function canEnableAction(item: SharePointItem, action: FileAction): boolean {
+  return canPerformItemAction(item, action);
 }
 
 type MenuAction = { id: FileAction; label: string; show: boolean; dividerBefore?: boolean };
@@ -170,28 +149,65 @@ export function ContextMenu({
   }, []);
 
   const actions: MenuAction[] = [
-    { id: "open", label: messages.open, show: true },
-    { id: "share", label: messages.share, show: true },
-    { id: "openInSharePoint", label: messages.openInSharePoint, show: Boolean(item.webUrl) },
-    { id: "download", label: messages.download, show: item.type === "file" },
-    { id: "delete", label: messages.delete, show: true, dividerBefore: true },
-    { id: "preview", label: messages.preview, show: item.type === "file" },
-    { id: "rename", label: messages.rename, show: true },
-    { id: "move", label: messages.move, show: true },
-    { id: "copy", label: messages.copy, show: true },
-    { id: "versionHistory", label: messages.versionHistory, show: item.type === "file" },
-    { id: "manageAccess", label: messages.manageAccess, show: true },
-    { id: "properties", label: messages.properties, show: true, dividerBefore: true },
-    { id: "activity", label: messages.activity, show: true },
-    { id: "checkout", label: messages.checkout, show: canShowAction(item, "checkout"), dividerBefore: true },
-    { id: "checkin", label: messages.checkin, show: canShowAction(item, "checkin") },
-    { id: "discardCheckout", label: messages.discardCheckout, show: canShowAction(item, "discardCheckout") },
+    { id: "open", label: messages.open, show: item.type === "folder" || canPerformItemAction(item, "open") },
+    { id: "share", label: messages.share, show: features.share && canPerformItemAction(item, "share") },
+    {
+      id: "openInSharePoint",
+      label: messages.openInSharePoint,
+      show: features.openInSharePoint && canPerformItemAction(item, "openInSharePoint"),
+    },
+    {
+      id: "download",
+      label: messages.download,
+      show: features.download && item.type === "file" && canPerformItemAction(item, "download"),
+    },
+    {
+      id: "delete",
+      label: messages.delete,
+      show: features.delete && canPerformItemAction(item, "delete"),
+      dividerBefore: true,
+    },
+    {
+      id: "preview",
+      label: messages.preview,
+      show: features.preview && item.type === "file" && canPerformItemAction(item, "preview"),
+    },
+    { id: "rename", label: messages.rename, show: features.rename && canPerformItemAction(item, "rename") },
+    { id: "move", label: messages.move, show: features.move && canPerformItemAction(item, "move") },
+    { id: "copy", label: messages.copy, show: features.copy && canPerformItemAction(item, "copy") },
+    {
+      id: "versionHistory",
+      label: messages.versionHistory,
+      show: features.versionHistory && item.type === "file" && canPerformItemAction(item, "versionHistory"),
+    },
+    {
+      id: "manageAccess",
+      label: messages.manageAccess,
+      show: features.manageAccess && canPerformItemAction(item, "manageAccess"),
+    },
+    { id: "properties", label: messages.properties, show: features.properties, dividerBefore: true },
+    { id: "activity", label: messages.activity, show: features.activityLog && canPerformItemAction(item, "activity") },
+    {
+      id: "checkout",
+      label: messages.checkout,
+      show: features.checkout && item.type === "file" && canPerformItemAction(item, "checkout"),
+      dividerBefore: true,
+    },
+    {
+      id: "checkin",
+      label: messages.checkin,
+      show: features.checkout && item.type === "file" && canPerformItemAction(item, "checkin"),
+    },
+    {
+      id: "discardCheckout",
+      label: messages.discardCheckout,
+      show: features.checkout && item.type === "file" && canPerformItemAction(item, "discardCheckout"),
+    },
   ];
 
   const visible = actions.filter(
     (action) =>
       action.show &&
-      canShowAction(item, action.id) &&
       (ACTION_FEATURE[action.id] ? features[ACTION_FEATURE[action.id]!] : true),
   );
   const viewportWidth = typeof window === "undefined" ? x + 248 : window.innerWidth;
@@ -216,6 +232,7 @@ export function ContextMenu({
             {action.dividerBefore ? <MenuDivider /> : null}
             <MenuItem
               icon={getActionIcon(action.id)}
+              disabled={!canEnableAction(item, action.id)}
               className={action.id === "delete" ? "spm-context-menu-delete" : undefined}
               style={
                 action.id === "delete"

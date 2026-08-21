@@ -1,8 +1,8 @@
 import type { GraphClient } from "../graph/client";
 import { itemUrl, siteResourcePath } from "../graph/paths";
-import type { GraphCollection } from "../mappers/item";
+import { mapDriveItem, type GraphCollection, type GraphDriveItem } from "../mappers/item";
 import { isVisibleListColumn, mapListColumn, mapListItemFields } from "../mappers/list-item";
-import type { ListColumn, ListItemFields } from "../types/models";
+import type { ListColumn, ListItemFields, SharePointItem } from "../types/models";
 
 interface GraphListColumn {
   id?: string;
@@ -23,6 +23,7 @@ interface GraphListItem {
   id?: string;
   contentType?: { id?: string; name?: string };
   fields?: Record<string, unknown>;
+  driveItem?: GraphDriveItem;
 }
 
 interface GraphDriveList {
@@ -58,6 +59,50 @@ export class ListItemService {
       .map(mapListColumn)
       .filter((column): column is ListColumn => Boolean(column))
       .filter(isVisibleListColumn);
+  }
+
+  /**
+   * Official SharePoint library listing: GET /sites/{site}/lists/{list}/items?$expand=driveItem
+   * Security-trimmed to the signed-in user — same source as the SharePoint list view.
+   */
+  async listAccessibleDriveItems(signal?: AbortSignal): Promise<SharePointItem[]> {
+    const listId = await this.resolveListId(signal);
+    if (!listId) return [];
+    const driveId = await this.getDriveId();
+
+    const items: SharePointItem[] = [];
+    let path: string | undefined = siteResourcePath(this.siteId, `lists/${listId}/items`);
+    let absoluteUrl = false;
+
+    while (path) {
+      const page: GraphCollection<GraphListItem> = await this.graph.get<GraphCollection<GraphListItem>>(path, {
+        absoluteUrl,
+        query: absoluteUrl
+          ? undefined
+          : {
+              $top: 200,
+              $expand:
+                "driveItem($select=id,name,size,webUrl,file,folder,createdDateTime,lastModifiedDateTime,createdBy,lastModifiedBy,parentReference,publication,eTag,sharepointIds)",
+            },
+        signal,
+      });
+
+      for (const row of page.value ?? []) {
+        const driveItem = row.driveItem;
+        if (!driveItem?.id || !driveItem.name) continue;
+        if (driveItem.parentReference?.driveId && driveItem.parentReference.driveId !== driveId) continue;
+        try {
+          items.push(mapDriveItem(driveItem, driveId));
+        } catch {
+          // Skip incomplete Graph rows.
+        }
+      }
+
+      path = page["@odata.nextLink"];
+      absoluteUrl = true;
+    }
+
+    return items;
   }
 
   async getFields(itemId: string, signal?: AbortSignal): Promise<ListItemFields> {

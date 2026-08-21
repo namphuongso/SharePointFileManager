@@ -79,12 +79,6 @@ export class DriveService {
     };
   }
 
-  async root(driveId: string, signal?: AbortSignal): Promise<import("../types/models").SharePointItem> {
-    const { mapDriveItem } = await import("../mappers/item");
-    const item = await this.graph.get<import("../mappers/item").GraphDriveItem>(`/drives/${driveId}/root`, { signal });
-    return mapDriveItem(item, driveId);
-  }
-
   async getDriveByList(listId: string, signal?: AbortSignal): Promise<DriveInfo> {
     const drive = await this.graph.get<GraphDrive>(siteResourcePath(this.siteId, `lists/${listId}/drive`), {
       signal,

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
 import { useFolderChildren } from "../hooks/hooks";
 import type { Messages } from "../i18n/messages";
-import { FolderIcon } from "./ui";
+import { FileTypeIcon } from "./FileTypeIcon";
 
 export interface FolderCrumb {
   id: string;
@@ -77,7 +77,7 @@ export function FolderPicker({
             className="spm-flex spm-w-full spm-items-center spm-gap-2 spm-rounded-md spm-px-2 spm-py-2 spm-text-left spm-text-sm hover:spm-bg-slate-50"
             onClick={() => setCrumbs((current) => [...current, { id: folder.id, name: folder.name }])}
           >
-            <FolderIcon />
+            <FileTypeIcon item={folder} size="sm" />
             <span className="spm-truncate">{folder.name}</span>
           </button>
         ))}

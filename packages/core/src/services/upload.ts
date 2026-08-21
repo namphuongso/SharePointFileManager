@@ -1,5 +1,4 @@
 import type { GraphClient } from "../graph/client";
-import { childrenUrl } from "../graph/paths";
 import { pathByNameUrl } from "../graph/paths";
 import { mapDriveItem, type GraphDriveItem } from "../mappers/item";
 import type { SharePointItem, UploadOptions } from "../types/models";
@@ -19,20 +18,6 @@ export class UploadService {
       return this.uploadSmallFile(options, bytes);
     }
     return this.uploadLargeFile(options, bytes);
-  }
-
-  async createPlaceholder(parentId: string, fileName: string, signal?: AbortSignal): Promise<SharePointItem> {
-    const driveId = await this.getDriveId();
-    const item = await this.graph.post<GraphDriveItem>(
-      childrenUrl(driveId, parentId),
-      {
-        name: fileName,
-        file: {},
-        "@microsoft.graph.conflictBehavior": "rename",
-      },
-      { signal },
-    );
-    return mapDriveItem(item, driveId);
   }
 
   private async uploadSmallFile(options: UploadOptions, bytes: Uint8Array): Promise<SharePointItem> {

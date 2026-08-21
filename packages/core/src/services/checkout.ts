@@ -13,10 +13,7 @@ export class CheckoutService {
   async checkout(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {
     const driveId = await this.getDriveId();
     await this.graph.post(`${itemUrl(driveId, itemId)}/checkout`, undefined, { signal });
-    return this.enrichCheckout(
-      await this.folders.get(itemId, { signal, expandListItem: true }),
-      signal,
-    );
+    return this.folders.get(itemId, { signal, expandListItem: true });
   }
 
   async checkin(itemId: string, comment?: string, signal?: AbortSignal): Promise<SharePointItem> {
@@ -26,49 +23,12 @@ export class CheckoutService {
       { comment: comment ?? "" },
       { signal },
     );
-    return this.enrichCheckout(
-      await this.folders.get(itemId, { signal, expandListItem: true }),
-      signal,
-    );
+    return this.folders.get(itemId, { signal, expandListItem: true });
   }
 
   async discardCheckout(itemId: string, signal?: AbortSignal): Promise<SharePointItem> {
     const driveId = await this.getDriveId();
     await this.graph.post(`${itemUrl(driveId, itemId)}/discardCheckout`, undefined, { signal });
-    return this.enrichCheckout(
-      await this.folders.get(itemId, { signal, expandListItem: true }),
-      signal,
-    );
+    return this.folders.get(itemId, { signal, expandListItem: true });
   }
-
-  async enrichCheckout(item: SharePointItem, signal?: AbortSignal): Promise<SharePointItem> {
-    if (item.type !== "file") return item;
-    const driveId = await this.getDriveId();
-    try {
-      const fields = await this.graph.get<Record<string, unknown>>(
-        `${itemUrl(driveId, item.id)}/listItem/fields`,
-        {
-          query: { $select: "CheckoutUserId,CheckoutUserLookupId,CheckedOutUserId" },
-          signal,
-        },
-      );
-      const checkoutUserId = text(fields.CheckoutUserId) || text(fields.CheckedOutUserId);
-      const isCheckedOut = Boolean(checkoutUserId) || item.capabilities?.isCheckedOut;
-      return {
-        ...item,
-        capabilities: {
-          ...item.capabilities,
-          isCheckedOut,
-          checkedOutBy: checkoutUserId ? { id: checkoutUserId } : item.capabilities?.checkedOutBy,
-          checkedOutByMe: item.capabilities?.checkedOutByMe,
-        },
-      };
-    } catch {
-      return item;
-    }
-  }
-}
-
-function text(value: unknown): string {
-  return typeof value === "string" ? value.trim() : typeof value === "number" ? String(value) : "";
 }
