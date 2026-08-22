@@ -1,5 +1,6 @@
 import { parseRetryAfterMs } from "./parse-retry-after";
 
+/** Chờ `ms` — dùng khi retry HTTP 429. */
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 

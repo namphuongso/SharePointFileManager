@@ -1,18 +1,8 @@
-import type { SharePointItem, SharePointItemType } from "../types/models";
+import type { SharePointItem } from "../types/models";
 import type { RestFile, RestFolder } from "../types/rest";
-import { requireUniqueId } from "../utils";
+import { mapRestItem, requireUniqueId } from "../utils";
 
-function mapRestItem(
-  type: SharePointItemType,
-  name: string,
-  uniqueId: string,
-  lastModifiedDateTime?: string,
-  size?: number,
-): SharePointItem {
-  return { id: uniqueId, name, type, size, lastModifiedDateTime };
-}
-
-/** JSON SP.File → SharePointItem. Thiếu UniqueId thì không dùng làm key UI được. */
+/** JSON SP.File → SharePointItem. */
 export function mapRestFile(file: RestFile): SharePointItem {
   return mapRestItem(
     "file",
@@ -23,7 +13,7 @@ export function mapRestFile(file: RestFile): SharePointItem {
   );
 }
 
-/** JSON SP.Folder → SharePointItem. Thiếu UniqueId thì không dùng làm key UI được. */
+/** JSON SP.Folder → SharePointItem. */
 export function mapRestFolder(folder: RestFolder): SharePointItem {
   return mapRestItem(
     "folder",

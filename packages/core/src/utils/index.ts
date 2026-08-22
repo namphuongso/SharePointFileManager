@@ -6,3 +6,5 @@ export { readErrorBody, parseSuccessBody } from "./parse-body";
 export { parseRetryAfterMs } from "./parse-retry-after";
 export { sleep, throttleWaitMs } from "./throttle";
 export { requireUniqueId } from "./require-unique-id";
+export { mapRestItem } from "./map-rest-item";
+
