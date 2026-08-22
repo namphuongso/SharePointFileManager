@@ -1,0 +1,37 @@
+---
+description: Chỉ SharePoint REST GET /_api — không Graph, không endpoint tự chế, không code thừa
+globs: packages/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# SharePoint REST
+
+Chỉ **SharePoint REST** `GET {site}/_api/...` qua `SharePointRestClient.get`. Không Microsoft Graph (`graph.microsoft.com`, `/v1.0/sites`, `/drives`).
+
+## Endpoint đã dùng (bám doc Microsoft)
+
+- List: `web/lists/getbytitle(...)` hoặc `web/lists` (`BaseTemplate eq 101`)
+- Folder/file: `GetFolderById` / `GetFolderByServerRelativeUrl` + `/Folders` + `/Files`
+- Schema cột (ẩn hiện cột): `web/lists(guid'{id}')/fields` — không suy cột từ `Files`/`Folders`
+
+Doc: [lists REST](https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-lists-and-list-items-with-rest), [folders/files REST](https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-folders-and-files-with-rest).
+
+## Query
+
+`$select` chỉ field đang dùng. Quan hệ (`RootFolder`, `Author`, `ListItemAllFields`) cần `$expand`. Không `$select=*`.
+
+## Cấm
+
+- Graph, PnPjs, CSOM, endpoint `/_api` không có trong doc Microsoft
+- Wrapper/helper “phòng khi dùng”, dead code, abstraction không có caller
+- POST/MERGE/DELETE trên REST hiện tại — thư viện **chỉ đọc**; ghi thì service mới + hỏi trước
+- `fetch` SharePoint từ `packages/react`
+
+```ts
+// ❌
+await fetch("https://graph.microsoft.com/v1.0/sites/...");
+await rest.get("web/lists/GetItemsByCustomHack");
+
+// ✅
+await this.rest.get(`${base}/Files`, { query: { $top: top, $select: "Name,UniqueId,TimeLastModified,Length" } });
+```

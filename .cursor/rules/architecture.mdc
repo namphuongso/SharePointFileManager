@@ -1,0 +1,42 @@
+---
+description: Cấu trúc packages, file một việc, types và comment của SharePoint File Manager
+alwaysApply: true
+---
+
+# Cấu trúc dự án
+
+Frontend chỉ đọc SharePoint. Host MSAL; UI **không** `fetch` SharePoint.
+
+```
+Host → packages/react (provider, hook, UI)
+     → packages/core (SharePointClient → REST GET)
+     → SharePoint Online /_api
+```
+
+Chi tiết: `docs/LIBRARY.md`.
+
+## Packages
+
+- `packages/core` — token, REST, resolve library, list folder/file, map, lỗi
+- `packages/react` — Provider, hook, bảng, i18n, Fluent
+- `examples/react-vite` — app mẫu, không nhét logic REST vào đây
+
+## File và thư mục
+
+- Việc liên quan **cùng thư mục**; **một file một việc** (không gộp resolve + map + sort vào một file).
+- Type/interface chỉ trong `types/` — không khai báo type public trong file logic.
+- Service mới: thư mục riêng dưới `services/` (vd. ghi/xóa không nhồi vào `services/library` hay `folder`).
+- UI gọi `SharePointClient` / hook; không gọi `SharePointRestClient` từ component.
+
+## Comment
+
+Tiếng Việt, theo **khối/hàm** (ý định + vì sao). Không comment từng dòng gán biến.
+
+```ts
+// ❌
+const top = options.top ?? 200; // mặc định 200
+
+// ✅
+/** Liệt kê một cấp thư mục/file (chỉ đọc). Path gốc từ getLibrary. */
+async listChildren(...) { ... }
+```
