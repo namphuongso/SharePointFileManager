@@ -9,21 +9,18 @@ import {
   Text,
   tokens,
 } from "@fluentui/react-components";
-import type { Messages } from "../i18n/messages";
+import type { FileListProps } from "../../types";
+import { formatBytes, formatRelativeDate } from "../../utils/format";
 import { FileTypeIcon } from "./FileTypeIcon";
-import { formatBytes, formatRelativeDate } from "./ui";
+
+/** Bảng một cấp: tên, sửa đổi, kích thước. Click folder thì gọi onOpenFolder. */
 
 export function FileList({
   items,
   locale,
   messages,
   onOpenFolder,
-}: {
-  items: SharePointItem[];
-  locale: string;
-  messages: Messages;
-  onOpenFolder: (item: SharePointItem) => void;
-}) {
+}: FileListProps) {
   return (
     <Table size="small" aria-label={messages.files} style={{ minWidth: 640 }}>
       <TableHeader>

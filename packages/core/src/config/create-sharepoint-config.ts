@@ -5,7 +5,7 @@ import type {
 } from "../types/models";
 
 /**
- * Merge app-level site/auth settings with a per-route library target.
+ * Gộp cấu hình site/auth cấp app với thư viện đích của từng trang.
  */
 export function createSharePointConfig(
   app: ResolvedSharePointAppConfig,

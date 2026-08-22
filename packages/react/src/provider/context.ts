@@ -1,12 +1,7 @@
 import { createContext, useContext } from "react";
-import type { SharePointClient } from "@namphuongso/sharepoint-file-manager-core";
-import type { Messages } from "../i18n/messages";
+import type { SharePointContextValue } from "../types";
 
-export interface SharePointContextValue {
-  client: SharePointClient;
-  locale: string;
-  messages: Messages;
-}
+/** Context cấp trang: client REST + locale + chuỗi UI. */
 
 export const SharePointContext = createContext<SharePointContextValue | null>(null);
 

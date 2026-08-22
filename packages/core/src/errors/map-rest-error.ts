@@ -1,51 +1,21 @@
-import { SharePointError, SharePointErrorCode } from "./sharepoint-error";
+import type { MapRestErrorInput, RestErrorBody } from "../types/rest";
+import type { SharePointErrorCode } from "../types/errors";
+import { SharePointError, SharePointErrorCode as ErrorCodes } from "./sharepoint-error";
+import { mapStatusToCode } from "./map-status-to-code";
+import { parseRetryAfterMs } from "./parse-retry-after";
 
-interface RestErrorBody {
-  error?: {
-    code?: string;
-    message?: { value?: string } | string;
-  };
-  "odata.error"?: {
-    code?: string;
-    message?: { value?: string };
-  };
-}
-
+/** Một số mã OData SharePoint không đi kèm HTTP status đúng ý nghĩa. */
 const REST_CODE_MAP: Record<string, SharePointErrorCode> = {
-  "-2147024891, System.UnauthorizedAccessException": SharePointErrorCode.Forbidden,
-  accessDenied: SharePointErrorCode.Forbidden,
-  unauthorized: SharePointErrorCode.Unauthorized,
-  "-2147024894, System.IO.FileNotFoundException": SharePointErrorCode.NotFound,
-  itemNotFound: SharePointErrorCode.NotFound,
-  "-2130575257, Microsoft.SharePoint.SPException": SharePointErrorCode.Conflict,
+  "-2147024891, System.UnauthorizedAccessException": ErrorCodes.Forbidden,
+  accessDenied: ErrorCodes.Forbidden,
+  unauthorized: ErrorCodes.Unauthorized,
+  "-2147024894, System.IO.FileNotFoundException": ErrorCodes.NotFound,
+  itemNotFound: ErrorCodes.NotFound,
+  "-2130575257, Microsoft.SharePoint.SPException": ErrorCodes.Conflict,
 };
 
-export function mapStatusToCode(status: number): SharePointErrorCode {
-  if (status === 401) return SharePointErrorCode.Unauthorized;
-  if (status === 403) return SharePointErrorCode.Forbidden;
-  if (status === 404) return SharePointErrorCode.NotFound;
-  if (status === 409 || status === 412) return SharePointErrorCode.Conflict;
-  if (status === 413) return SharePointErrorCode.TooLarge;
-  if (status === 429) return SharePointErrorCode.Throttled;
-  if (status === 501) return SharePointErrorCode.Unsupported;
-  return SharePointErrorCode.Unknown;
-}
-
-export function parseRetryAfterMs(header: string | null): number | undefined {
-  if (!header) return undefined;
-  const seconds = Number(header);
-  if (!Number.isNaN(seconds)) return seconds * 1000;
-  const date = Date.parse(header);
-  if (!Number.isNaN(date)) return Math.max(0, date - Date.now());
-  return undefined;
-}
-
-export function mapRestError(input: {
-  status: number;
-  body?: unknown;
-  retryAfter?: string | null;
-  fallbackMessage?: string;
-}): SharePointError {
+/** JSON lỗi REST → SharePointError (mã, message, Retry-After). */
+export function mapRestError(input: MapRestErrorInput): SharePointError {
   const body = input.body as RestErrorBody | undefined;
   const err = body?.error ?? body?.["odata.error"];
   const rawMessage = err?.message;

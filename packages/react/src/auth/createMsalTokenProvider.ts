@@ -1,23 +1,13 @@
 import type { TokenProvider } from "@namphuongso/sharepoint-file-manager-core";
-
-type SilentTokenResult = { accessToken: string };
-
-/**
- * Structural MSAL instance. `never` on the request param keeps this compatible
- * with msal-browser 3.x IPublicClientApplication type drift.
- */
-export type MsalSilentTokenSource = {
-  acquireTokenSilent: (request: never) => Promise<SilentTokenResult>;
-};
+import type { CreateMsalTokenProviderOptions } from "../types";
 
 /**
- * Production auth adapter. Host apps already signed in with MSAL pass their
- * PublicClientApplication + active account. The library only calls acquireTokenSilent.
+ * Adapter auth: host đã đăng nhập MSAL, truyền PublicClientApplication + account đang dùng.
+ * Thư viện chỉ gọi acquireTokenSilent.
  */
-export function createMsalTokenProvider(options: {
-  instance: MsalSilentTokenSource;
-  account: object;
-}): TokenProvider {
+export function createMsalTokenProvider(
+  options: CreateMsalTokenProviderOptions,
+): TokenProvider {
   return {
     async getAccessToken({ scopes, forceRefresh }) {
       const result = await options.instance.acquireTokenSilent({

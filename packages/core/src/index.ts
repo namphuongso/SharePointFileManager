@@ -1,4 +1,3 @@
-export type { TokenProvider, TokenRequest } from "./auth/token-provider";
 export { defaultSharePointScopes, DEFAULT_SHAREPOINT_SCOPE_SUFFIX } from "./auth/token-provider";
 
 export { SharePointClient } from "./client";
@@ -7,11 +6,16 @@ export { resolveConfig } from "./config/resolve-config";
 export { createSharePointConfig } from "./config/create-sharepoint-config";
 
 export { SharePointError, SharePointErrorCode, isSharePointError } from "./errors/sharepoint-error";
-export { mapRestError, mapStatusToCode } from "./errors/map-rest-error";
+export type { SharePointErrorOptions } from "./types/errors";
+export { mapRestError } from "./errors/map-rest-error";
+export { mapStatusToCode } from "./errors/map-status-to-code";
 
 export { FolderService } from "./services/folder";
+export { resolveLibrary } from "./services/library";
 
 export type {
+  TokenProvider,
+  TokenRequest,
   SharePointConfig,
   SharePointAppConfig,
   ResolvedSharePointAppConfig,
@@ -19,4 +23,5 @@ export type {
   ResolvedSharePointConfig,
   SharePointItem,
   SharePointItemType,
+  LibraryContext,
 } from "./types/models";

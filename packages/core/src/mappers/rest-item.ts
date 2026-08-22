@@ -1,19 +1,7 @@
 import type { SharePointItem } from "../types/models";
+import type { RestFile, RestFolder } from "../types/rest";
 
-export interface RestFile {
-  UniqueId?: string;
-  Name?: string;
-  Length?: number;
-  TimeLastModified?: string;
-}
-
-export interface RestFolder {
-  UniqueId?: string;
-  Name?: string;
-  ServerRelativeUrl?: string;
-  TimeLastModified?: string;
-}
-
+/** JSON SP.File → SharePointItem. Thiếu UniqueId thì không dùng làm key UI được. */
 export function mapRestFile(file: RestFile): SharePointItem {
   const name = file.Name ?? "file";
   const id = file.UniqueId;
@@ -27,6 +15,7 @@ export function mapRestFile(file: RestFile): SharePointItem {
   };
 }
 
+/** JSON SP.Folder → SharePointItem. */
 export function mapRestFolder(folder: RestFolder): SharePointItem {
   const name = folder.Name ?? "folder";
   const id = folder.UniqueId;

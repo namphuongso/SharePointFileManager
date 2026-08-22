@@ -1,8 +1,10 @@
 import { Text, tokens } from "@fluentui/react-components";
 import { DocumentRegular } from "@fluentui/react-icons";
-import type { Messages } from "../i18n/messages";
+import type { EmptyStateProps } from "../../types";
 
-export function EmptyState({ messages }: { messages: Messages }) {
+/** Folder không có file/thư mục con. */
+
+export function EmptyState({ messages }: EmptyStateProps) {
   return (
     <div
       style={{

@@ -1,30 +1,17 @@
-import type { TokenProvider } from "../auth/token-provider";
 import { mapRestError } from "../errors/map-rest-error";
 import { SharePointError, SharePointErrorCode } from "../errors/sharepoint-error";
-
-export interface RestRequestOptions {
-  path: string;
-  method?: string;
-  query?: Record<string, string | number | boolean | undefined>;
-  headers?: Record<string, string>;
-  signal?: AbortSignal;
-}
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+import type { RestRequestOptions, SharePointRestClientOptions } from "../types/rest";
+import { buildRestUrl } from "./build-url";
+import { parseSuccessBody, readErrorBody } from "./parse-body";
+import { sleep, throttleWaitMs } from "./throttle";
 
 /**
- * SharePoint REST client — GET only (list / browse).
+ * Client REST SharePoint — chỉ GET (duyệt danh sách).
+ * 401: lấy token mới một lần. 429: chờ rồi thử lại tối đa 3 lần.
  * @see https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service
  */
 export class SharePointRestClient {
-  constructor(
-    private readonly options: {
-      siteUrl: string;
-      tokenProvider: TokenProvider;
-      scopes: string[];
-      fetchImpl?: typeof fetch;
-    },
-  ) {}
+  constructor(private readonly options: SharePointRestClientOptions) {}
 
   get siteUrl(): string {
     return this.options.siteUrl.replace(/\/$/, "");
@@ -53,7 +40,7 @@ export class SharePointRestClient {
         });
       }
 
-      const url = this.buildUrl(options);
+      const url = buildRestUrl((path) => this.apiUrl(path), options);
       const headers = new Headers(options.headers);
       if (!headers.has("Accept")) {
         headers.set("Accept", "application/json;odata=nometadata");
@@ -90,52 +77,19 @@ export class SharePointRestClient {
 
       if (response.status === 429 && throttleAttempt < 3) {
         throttleAttempt += 1;
-        const retryAfter = response.headers.get("Retry-After");
-        const waitMs = retryAfter ? Number(retryAfter) * 1000 || 2000 : 1000 * throttleAttempt;
-        await sleep(waitMs);
+        await sleep(throttleWaitMs(response.headers.get("Retry-After"), throttleAttempt));
         continue;
       }
 
       if (!response.ok) {
-        const body = await safeJson(response);
         throw mapRestError({
           status: response.status,
-          body,
+          body: await readErrorBody(response),
           retryAfter: response.headers.get("Retry-After"),
         });
       }
 
-      if (response.status === 204 || response.headers.get("Content-Length") === "0") {
-        return undefined as T;
-      }
-
-      const text = await response.text();
-      if (!text) return undefined as T;
-      try {
-        return JSON.parse(text) as T;
-      } catch {
-        return text as unknown as T;
-      }
+      return parseSuccessBody<T>(response);
     }
-  }
-
-  private buildUrl(options: RestRequestOptions): string {
-    const base = this.apiUrl(options.path);
-    if (!options.query) return base;
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(options.query)) {
-      if (value === undefined) continue;
-      params.set(key, String(value));
-    }
-    const qs = params.toString();
-    return qs ? `${base}?${qs}` : base;
-  }
-}
-
-async function safeJson(response: Response): Promise<unknown> {
-  try {
-    return await response.json();
-  } catch {
-    return undefined;
   }
 }

@@ -1,33 +1,16 @@
-import type {
-  ResolvedSharePointAppConfig,
-  SharePointAppConfig,
-  SharePointConfig,
-  SharePointLibraryTarget,
-} from "@namphuongso/sharepoint-file-manager-core";
+import type { ResolvedSharePointAppConfig } from "@namphuongso/sharepoint-file-manager-core";
 import { createSharePointConfig } from "@namphuongso/sharepoint-file-manager-core";
-import { createContext, useContext, useMemo, type ReactNode } from "react";
-import type { Messages } from "../i18n/messages";
+import { useMemo } from "react";
+import type {
+  SharePointAppContextValue,
+  SharePointAppProviderProps,
+  SharePointAppStatus,
+} from "../types";
+import { SharePointAppContext } from "./useSharePointApp";
 
-export interface SharePointAppProviderProps {
-  config: SharePointAppConfig;
-  locale?: string;
-  messages?: Partial<Messages>;
-  children: ReactNode;
-}
-
-export type SharePointAppStatus = "ready" | "error";
-
-interface SharePointAppContextValue {
-  appConfig: ResolvedSharePointAppConfig | null;
-  status: SharePointAppStatus;
-  error: unknown;
-  locale?: string;
-  messages?: Partial<Messages>;
-  createConfig: (target?: SharePointLibraryTarget) => SharePointConfig;
-}
-
-const SharePointAppContext = createContext<SharePointAppContextValue | null>(null);
-
+/**
+ * Cấp app: siteUrl + token. createConfig gắn libraryName cho từng trang.
+ */
 export function SharePointAppProvider({
   config,
   locale,
@@ -65,16 +48,4 @@ export function SharePointAppProvider({
   );
 
   return <SharePointAppContext.Provider value={value}>{children}</SharePointAppContext.Provider>;
-}
-
-export function useSharePointApp(): SharePointAppContextValue {
-  const value = useContext(SharePointAppContext);
-  if (!value) {
-    throw new Error("useSharePointApp must be used within SharePointAppProvider");
-  }
-  return value;
-}
-
-export function useOptionalSharePointApp(): SharePointAppContextValue | null {
-  return useContext(SharePointAppContext);
 }

@@ -1,5 +1,7 @@
 import { Skeleton, SkeletonItem } from "@fluentui/react-components";
 
+/** Placeholder khi đang tải listChildren. */
+
 export function LibrarySkeleton() {
   return (
     <div style={{ padding: 12 }} aria-busy="true">

@@ -1,20 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FluentProvider } from "@fluentui/react-components";
-import { SharePointClient, type SharePointConfig } from "@namphuongso/sharepoint-file-manager-core";
-import { useMemo, useState, type ReactNode } from "react";
+import { SharePointClient } from "@namphuongso/sharepoint-file-manager-core";
+import { useMemo, useState } from "react";
+import { isDarkTheme } from "../fluent/isDarkTheme";
 import { sharePointDarkTheme, sharePointLightTheme } from "../fluent/theme";
-import { getMessages, type Messages } from "../i18n/messages";
+import { getMessages } from "../i18n/messages";
+import type { SharePointProviderProps } from "../types";
 import { SharePointContext } from "./context";
 
-export interface SharePointProviderProps {
-  config: SharePointConfig;
-  locale?: string;
-  messages?: Partial<Messages>;
-  queryClient?: QueryClient;
-  children: ReactNode;
-  theme?: "light" | "dark" | "system";
-}
-
+/**
+ * Cấp trang: tạo SharePointClient, QueryClient, Fluent theme, i18n.
+ */
 export function SharePointProvider({
   config,
   locale = "vi-VN",
@@ -27,11 +23,7 @@ export function SharePointProvider({
   const [fallbackClient] = useState(() => new QueryClient());
   const resolvedClient = queryClient ?? fallbackClient;
   const resolvedMessages = { ...getMessages(locale), ...messages };
-  const isDark =
-    theme === "dark" ||
-    (theme === "system" &&
-      typeof matchMedia !== "undefined" &&
-      matchMedia("(prefers-color-scheme: dark)").matches);
+  const isDark = isDarkTheme(theme);
 
   return (
     <QueryClientProvider client={resolvedClient}>

@@ -1,28 +1,4 @@
-import { Button as FluentButton, MessageBar, MessageBarBody } from "@fluentui/react-components";
-
-export function ErrorBanner({
-  message,
-  onRetry,
-  retryLabel = "Retry",
-}: {
-  message: string;
-  onRetry?: () => void;
-  retryLabel?: string;
-}) {
-  return (
-    <MessageBar intent="error" style={{ margin: "8px 12px" }}>
-      <MessageBarBody>
-        {message}
-        {onRetry ? (
-          <FluentButton appearance="transparent" size="small" onClick={onRetry} style={{ marginLeft: 8 }}>
-            {retryLabel}
-          </FluentButton>
-        ) : null}
-      </MessageBarBody>
-    </MessageBar>
-  );
-}
-
+/** Định dạng kích thước file trên cột Size. */
 export function formatBytes(size?: number): string {
   if (size === undefined) return "—";
   if (size < 1024) return `${size} B`;
@@ -30,6 +6,7 @@ export function formatBytes(size?: number): string {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Thời gian tương đối (locale); quá 7 ngày thì ngày tháng tuyệt đối. */
 export function formatRelativeDate(value: string | undefined, locale: string): string {
   if (!value) return "—";
   const date = new Date(value);

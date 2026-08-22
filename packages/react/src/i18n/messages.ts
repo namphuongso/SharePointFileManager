@@ -1,14 +1,6 @@
-export interface Messages {
-  files: string;
-  name: string;
-  modified: string;
-  size: string;
-  empty: string;
-  emptyHint: string;
-  retry: string;
-  refresh: string;
-  unknownError: string;
-}
+import type { Messages } from "../types";
+
+/** Chuỗi UI vi/en. getMessages chọn theo locale, có thể ghi đè từng key. */
 
 const vi: Messages = {
   files: "Tệp",

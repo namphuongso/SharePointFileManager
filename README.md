@@ -51,10 +51,6 @@ Library **không login**. Host phải đã đăng nhập Microsoft.
 
 SharePoint delegated permission `AllSites.Write` + admin consent. Scope: `https://{tenant}.sharepoint.com/AllSites.Write`.
 
-## Docs
+## Cấu trúc code
 
-- [architecture.md](./docs/architecture.md)
-- [authentication.md](./docs/authentication.md)
-- [permissions.md](./docs/permissions.md)
-- [configuration.md](./docs/configuration.md)
-- [rest-api.md](./docs/rest-api.md)
+Xem [docs/LIBRARY.md](./docs/LIBRARY.md) — một file cho dev (package, luồng REST, chỗ sửa `$select`).

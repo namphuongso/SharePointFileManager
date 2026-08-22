@@ -1,6 +1,8 @@
 import { defaultSharePointScopes } from "../auth/token-provider";
 import type { ResolvedSharePointConfig, SharePointConfig } from "../types/models";
 
+/** Chuẩn hóa siteUrl, siteId, rootItemId, scopes trước khi tạo client. */
+
 export function resolveConfig(config: SharePointConfig): ResolvedSharePointConfig {
   const siteUrl = config.siteUrl?.trim();
   if (!siteUrl) {

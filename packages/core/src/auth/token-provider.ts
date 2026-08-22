@@ -1,19 +1,6 @@
-export interface TokenRequest {
-  scopes: string[];
-  forceRefresh?: boolean;
-}
-
 /**
- * Host applications must supply a TokenProvider.
- * The library never logs the user in and never stores tokens.
- */
-export interface TokenProvider {
-  getAccessToken(request: TokenRequest): Promise<string>;
-}
-
-/**
- * Build delegated SharePoint resource scopes for a site URL.
- * Matches Entra SharePoint permission **AllSites.Write** (read + write all site collections).
+ * Tạo scope delegated SharePoint từ URL site.
+ * Khớp quyền Entra **AllSites.Write** (đọc + ghi mọi site collection).
  * @see https://learn.microsoft.com/en-us/sharepoint/dev/spfx/use-aadhttpclient
  */
 export function defaultSharePointScopes(siteUrl: string): string[] {

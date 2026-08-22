@@ -5,7 +5,7 @@ import {
   type Theme,
 } from "@fluentui/react-components";
 
-/** Microsoft 365 / SharePoint brand ramp. */
+/** Bảng màu thương hiệu Microsoft 365 / SharePoint. */
 const sharePointBrand: BrandVariants = {
   10: "#020305",
   20: "#111723",
@@ -25,7 +25,7 @@ const sharePointBrand: BrandVariants = {
   160: "#EBF3FC",
 };
 
-/** Fluent 2 radii used by the 2024 SharePoint / OneDrive library. */
+/** Bo góc Fluent 2 (thư viện SharePoint / OneDrive 2024). */
 export const sharePointLightTheme: Theme = {
   ...createLightTheme(sharePointBrand),
   borderRadiusNone: "0px",

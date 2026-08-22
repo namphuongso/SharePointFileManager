@@ -1,3 +1,5 @@
+import type { SharePointErrorCode as ErrorCode, SharePointErrorOptions } from "../types/errors";
+
 export const SharePointErrorCode = {
   Unauthorized: "Unauthorized",
   Forbidden: "Forbidden",
@@ -9,25 +11,17 @@ export const SharePointErrorCode = {
   Unsupported: "Unsupported",
   Cancelled: "Cancelled",
   Unknown: "Unknown",
-} as const;
+} as const satisfies Record<ErrorCode, ErrorCode>;
 
-export type SharePointErrorCode =
-  (typeof SharePointErrorCode)[keyof typeof SharePointErrorCode];
+/** Lỗi SharePoint REST: mã ổn định + HTTP status + Retry-After khi bị 429. */
 
 export class SharePointError extends Error {
-  readonly code: SharePointErrorCode;
+  readonly code: ErrorCode;
   readonly status?: number;
   readonly restCode?: string;
   readonly retryAfterMs?: number;
 
-  constructor(options: {
-    code: SharePointErrorCode;
-    message: string;
-    status?: number;
-    restCode?: string;
-    retryAfterMs?: number;
-    cause?: unknown;
-  }) {
+  constructor(options: SharePointErrorOptions) {
     super(options.message, { cause: options.cause });
     this.name = "SharePointError";
     this.code = options.code;
