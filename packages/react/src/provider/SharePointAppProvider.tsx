@@ -1,5 +1,4 @@
-import type { ResolvedSharePointAppConfig } from "@namphuongso/sharepoint-file-manager-core";
-import { createSharePointConfig } from "@namphuongso/sharepoint-file-manager-core";
+import { createSharePointConfig, resolveAppConfig } from "@namphuongso/sharepoint-file-manager-core";
 import { useMemo } from "react";
 import type {
   SharePointAppContextValue,
@@ -17,18 +16,11 @@ export function SharePointAppProvider({
   messages,
   children,
 }: SharePointAppProviderProps) {
-  const siteUrl = config.siteUrl?.trim() ?? "";
-  const status: SharePointAppStatus = siteUrl ? "ready" : "error";
-  const error = siteUrl ? undefined : new Error("SharePointAppProvider requires config.siteUrl");
-
-  const resolvedAppConfig = useMemo<ResolvedSharePointAppConfig | null>(() => {
-    if (!siteUrl) return null;
-    return {
-      ...config,
-      siteUrl,
-      siteId: config.siteId?.trim() || siteUrl,
-    };
-  }, [config, siteUrl]);
+  const resolvedAppConfig = useMemo(() => resolveAppConfig(config), [config]);
+  const status: SharePointAppStatus = resolvedAppConfig ? "ready" : "error";
+  const error = resolvedAppConfig
+    ? undefined
+    : new Error("SharePointAppProvider requires config.siteUrl");
 
   const value = useMemo<SharePointAppContextValue>(
     () => ({

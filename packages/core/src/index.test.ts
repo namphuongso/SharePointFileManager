@@ -11,6 +11,14 @@ describe("resolveConfig", () => {
     expect(config.scopes[0]).toContain("AllSites.Write");
     expect(config.rootItemId).toBe("root");
   });
+
+  it("strips trailing slash from siteUrl", () => {
+    const config = resolveConfig({
+      siteUrl: "https://contoso.sharepoint.com/sites/eOffice/",
+      tokenProvider: { getAccessToken: async () => "token" },
+    });
+    expect(config.siteUrl).toBe("https://contoso.sharepoint.com/sites/eOffice");
+  });
 });
 
 describe("mapRestError", () => {

@@ -1,9 +1,15 @@
 import { mapRestError } from "../errors/map-rest-error";
 import { SharePointError, SharePointErrorCode } from "../errors/sharepoint-error";
 import type { RestRequestOptions, SharePointRestClientOptions } from "../types/rest";
-import { buildRestUrl } from "./build-url";
-import { parseSuccessBody, readErrorBody } from "./parse-body";
-import { sleep, throttleWaitMs } from "./throttle";
+import {
+  buildApiUrl,
+  buildRestUrl,
+  normalizeSiteUrl,
+  parseSuccessBody,
+  readErrorBody,
+  sleep,
+  throttleWaitMs,
+} from "../utils";
 
 /**
  * Client REST SharePoint — chỉ GET (duyệt danh sách).
@@ -14,12 +20,11 @@ export class SharePointRestClient {
   constructor(private readonly options: SharePointRestClientOptions) {}
 
   get siteUrl(): string {
-    return this.options.siteUrl.replace(/\/$/, "");
+    return normalizeSiteUrl(this.options.siteUrl);
   }
 
   apiUrl(path: string): string {
-    const cleaned = path.replace(/^\/+/, "").replace(/^_api\/?/i, "");
-    return `${this.siteUrl}/_api/${cleaned}`;
+    return buildApiUrl(this.siteUrl, path);
   }
 
   async get<T>(path: string, options: Omit<RestRequestOptions, "path" | "method"> = {}): Promise<T> {
@@ -33,12 +38,7 @@ export class SharePointRestClient {
     let throttleAttempt = 0;
 
     while (true) {
-      if (options.signal?.aborted) {
-        throw new SharePointError({
-          code: SharePointErrorCode.Cancelled,
-          message: "Request was cancelled",
-        });
-      }
+      throwIfCancelled(options.signal);
 
       const url = buildRestUrl((path) => this.apiUrl(path), options);
       const headers = new Headers(options.headers);
@@ -56,13 +56,7 @@ export class SharePointRestClient {
       try {
         response = await fetchImpl(url, { method, headers, signal: options.signal });
       } catch (error) {
-        if (options.signal?.aborted) {
-          throw new SharePointError({
-            code: SharePointErrorCode.Cancelled,
-            message: "Request was cancelled",
-            cause: error,
-          });
-        }
+        throwIfCancelled(options.signal, error);
         throw new SharePointError({
           code: SharePointErrorCode.NetworkError,
           message: "SharePoint REST request failed",
@@ -75,9 +69,10 @@ export class SharePointRestClient {
         continue;
       }
 
+      const retryAfter = response.headers.get("Retry-After");
       if (response.status === 429 && throttleAttempt < 3) {
         throttleAttempt += 1;
-        await sleep(throttleWaitMs(response.headers.get("Retry-After"), throttleAttempt));
+        await sleep(throttleWaitMs(retryAfter, throttleAttempt));
         continue;
       }
 
@@ -85,7 +80,7 @@ export class SharePointRestClient {
         throw mapRestError({
           status: response.status,
           body: await readErrorBody(response),
-          retryAfter: response.headers.get("Retry-After"),
+          retryAfter,
         });
       }
 
@@ -93,3 +88,13 @@ export class SharePointRestClient {
     }
   }
 }
+
+function throwIfCancelled(signal: AbortSignal | undefined, cause?: unknown): void {
+  if (!signal?.aborted) return;
+  throw new SharePointError({
+    code: SharePointErrorCode.Cancelled,
+    message: "Request was cancelled",
+    cause,
+  });
+}
+

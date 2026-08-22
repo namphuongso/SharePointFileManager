@@ -14,6 +14,7 @@ export {
   SharePointErrorCode,
   defaultSharePointScopes,
   createSharePointConfig,
+  resolveAppConfig,
   isSharePointError,
 } from "@namphuongso/sharepoint-file-manager-core";
 

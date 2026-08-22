@@ -5,10 +5,14 @@ import type { RestList } from "../../types/rest";
  * Title và tên URL thường khác nhau nên phải khớp cả ba.
  */
 export function matchesLibraryName(list: RestList, libraryName: string): boolean {
-  const needle = libraryName.trim().toLowerCase();
+  const needle = normalizeName(libraryName);
   return (
-    list.Title?.trim().toLowerCase() === needle ||
-    list.RootFolder?.Name?.trim().toLowerCase() === needle ||
-    list.EntityTypeName?.trim().toLowerCase() === needle
+    normalizeName(list.Title) === needle ||
+    normalizeName(list.RootFolder?.Name) === needle ||
+    normalizeName(list.EntityTypeName) === needle
   );
+}
+
+function normalizeName(value?: string): string {
+  return value?.trim().toLowerCase() ?? "";
 }

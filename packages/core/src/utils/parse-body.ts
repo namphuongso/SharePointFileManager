@@ -11,7 +11,10 @@ export async function readErrorBody(response: Response): Promise<unknown> {
  * Parse body thành công: 204 / rỗng → undefined; JSON thì object; còn lại giữ text.
  */
 export async function parseSuccessBody<T>(response: Response): Promise<T> {
-  if (response.status === 204 || response.headers.get("Content-Length") === "0") {
+  if (
+    response.status === 204 ||
+    response.headers.get("Content-Length") === "0"
+  ) {
     return undefined as T;
   }
   const text = await response.text();

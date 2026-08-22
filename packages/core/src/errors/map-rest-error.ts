@@ -2,7 +2,7 @@ import type { MapRestErrorInput, RestErrorBody } from "../types/rest";
 import type { SharePointErrorCode } from "../types/errors";
 import { SharePointError, SharePointErrorCode as ErrorCodes } from "./sharepoint-error";
 import { mapStatusToCode } from "./map-status-to-code";
-import { parseRetryAfterMs } from "./parse-retry-after";
+import { parseRetryAfterMs } from "../utils";
 
 /** Một số mã OData SharePoint không đi kèm HTTP status đúng ý nghĩa. */
 const REST_CODE_MAP: Record<string, SharePointErrorCode> = {

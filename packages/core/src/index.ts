@@ -4,6 +4,7 @@ export { SharePointClient } from "./client";
 export { SharePointRestClient } from "./rest/client";
 export { resolveConfig } from "./config/resolve-config";
 export { createSharePointConfig } from "./config/create-sharepoint-config";
+export { resolveAppConfig } from "./config/resolve-app-config";
 
 export { SharePointError, SharePointErrorCode, isSharePointError } from "./errors/sharepoint-error";
 export type { SharePointErrorOptions } from "./types/errors";

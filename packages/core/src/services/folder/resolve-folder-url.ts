@@ -1,5 +1,5 @@
 import type { SharePointRestClient } from "../../rest/client";
-import { encodeServerRelativeUrl } from "../../rest/odata";
+import { escapeODataLiteral } from "../../utils";
 import {
   SharePointError,
   SharePointErrorCode,
@@ -36,6 +36,6 @@ export async function resolveFolderUrl(
 }
 
 export function folderChildrenPath(serverRelativeUrl: string): string {
-  const encoded = encodeServerRelativeUrl(serverRelativeUrl);
+  const encoded = escapeODataLiteral(serverRelativeUrl);
   return `web/GetFolderByServerRelativeUrl('${encoded}')`;
 }

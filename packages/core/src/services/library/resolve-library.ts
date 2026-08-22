@@ -1,5 +1,6 @@
 import type { SharePointRestClient } from "../../rest/client";
 import { SharePointError, SharePointErrorCode } from "../../errors/sharepoint-error";
+import { escapeODataLiteral } from "../../utils";
 import type { LibraryContext } from "../../types/models";
 import type { RestList } from "../../types/rest";
 import { matchesLibraryName } from "./match-library-name";
@@ -40,7 +41,7 @@ async function getByTitle(
   rest: SharePointRestClient,
   libraryName: string,
 ): Promise<RestList | undefined> {
-  const title = libraryName.replace(/'/g, "''");
+  const title = escapeODataLiteral(libraryName);
   try {
     return await rest.get<RestList>(`web/lists/getbytitle('${title}')`, {
       query: { $expand: "RootFolder", $select: LIST_SELECT },
