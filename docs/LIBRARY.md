@@ -30,24 +30,28 @@ Hiện **không** có upload, share, checkout, search, Graph.
 
 ```text
 types/                      models, rest, errors
-client.ts                   Ghép config + REST + cache thư viện + FolderService
+client.ts                   Ghép config + REST + cache thư viện + FolderService + FieldService
 auth/                       defaultSharePointScopes
 config/                     resolve-config, create-sharepoint-config
 rest/                       client GET, build-url, parse-body, throttle, odata
 services/library/           resolve theo libraryName
 services/folder/            listChildren + resolve path
-mappers/                    SP.File / SP.Folder → SharePointItem
+services/fields/            list schema cột (GET .../fields, không $select)
+mappers/                    list item / SP.Field → model
 errors/                     SharePointError + map HTTP/OData
 ```
 
 Luồng list một folder:
 
-1. `getLibrary()` (cache) → `rootFolderServerRelativeUrl`
-2. Nếu không phải root: `GetFolderById` lấy `ServerRelativeUrl`
-3. `.../Folders` và `.../Files`
-4. Bỏ folder `Forms`, map, sort folder trước file
+1. `getLibrary()` (cache) → `listId` + `rootFolderServerRelativeUrl`
+2. Nếu không phải root: `GetFolderById` lấy `ServerRelativeUrl` (= FileDirRef)
+3. `GET web/lists(guid)/items?$filter=FileDirRef eq '...'` — `$select=*` + property `$expand`; `$expand=File,Folder,Author,Editor`, `$top=30`
+4. Trang sau: GET nguyên `@odata.nextLink` (`SharePointRestClient.getUrl`)
+5. Bỏ folder `Forms`, map `File.UniqueId` / `Folder.UniqueId`
 
-Thêm cột UI: sửa `$select` trong `services/folder/folder.ts` rồi map trong `mappers/rest-item.ts`.
+Schema cột (option ẩn/hiện): `GET web/lists(guid'{listId}')/fields` — không `$select`.
+
+Giá trị cột trên từng dòng nằm ở `SharePointItem.fields`. Ẩn/hiện cột chỉ lọc UI. Query OData encode `%20` (không `+`).
 
 ## React — thứ tự đọc
 
@@ -55,7 +59,7 @@ Thêm cột UI: sửa `$select` trong `services/folder/folder.ts` rồi map tron
 types/                      Props, Messages, MSAL
 auth/                       createMsalTokenProvider
 provider/                   AppProvider + SharePointProvider + hooks
-hooks/                      useFolderChildren, getErrorMessage
+hooks/                      useFolderChildren, useLibraryFields, getErrorMessage
 fluent/                     theme, isDarkTheme
 i18n/                       messages
 utils/                      format bytes / ngày
@@ -67,5 +71,5 @@ components/file-manager/    UI duyệt thư viện (browser, bảng, empty, bann
 - Interface/type nằm ở `types/` — không khai báo chung file logic.
 - Việc liên quan nằm **cùng thư mục**; mỗi file một việc.
 - REST chỉ đọc: thêm ghi/xóa thì tách service mới, không nhồi vào `services/library`.
-- `$select` chỉ field đang dùng; quan hệ (`Author`, `ListItemAllFields`) cần `$expand`.
+- `$select` chỉ khi lấy 1–vài property (vd. `ServerRelativeUrl`). List items / fields: **không** `$select` để đủ cột. `$expand` cho `File`, `Folder`, `Author`, `Editor`. Không `$skip` trên items — dùng `@odata.nextLink`.
 - Comment theo **khối / hàm** (ý định + vì sao), tiếng Việt, không comment từng dòng gán biến.

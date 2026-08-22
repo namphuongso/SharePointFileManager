@@ -18,7 +18,7 @@ import { FileList } from "./FileView";
 import { LibrarySkeleton } from "./LibrarySkeleton";
 
 /**
- * Duyệt một thư viện: breadcrumb + list children.
+ * Duyệt một thư viện: breadcrumb + list children (phân trang nextLink).
  * Không tạo client — phải nằm trong SharePointProvider.
  */
 export function FileBrowser({ className, title }: FileBrowserProps) {
@@ -29,7 +29,10 @@ export function FileBrowser({ className, title }: FileBrowserProps) {
   ]);
   const currentFolderId = crumbs[crumbs.length - 1]?.id ?? rootId;
   const childrenQuery = useFolderChildren(currentFolderId);
-  const items = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
+  const items = useMemo(
+    () => childrenQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [childrenQuery.data],
+  );
 
   function openFolder(item: SharePointItem) {
     if (item.type !== "folder") return;
@@ -88,10 +91,21 @@ export function FileBrowser({ className, title }: FileBrowserProps) {
       ) : null}
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-        {childrenQuery.isLoading ? <LibrarySkeleton /> : null}
-        {!childrenQuery.isLoading && items.length === 0 ? <EmptyState messages={messages} /> : null}
-        {!childrenQuery.isLoading && items.length > 0 ? (
+        {childrenQuery.isPending ? <LibrarySkeleton /> : null}
+        {!childrenQuery.isPending && items.length === 0 ? <EmptyState messages={messages} /> : null}
+        {!childrenQuery.isPending && items.length > 0 ? (
           <FileList items={items} locale={locale} messages={messages} onOpenFolder={openFolder} />
+        ) : null}
+        {childrenQuery.hasNextPage ? (
+          <div style={{ padding: 12, display: "flex", justifyContent: "center" }}>
+            <Button
+              appearance="secondary"
+              disabled={childrenQuery.isFetchingNextPage}
+              onClick={() => void childrenQuery.fetchNextPage()}
+            >
+              {messages.loadMore}
+            </Button>
+          </div>
         ) : null}
       </div>
     </div>

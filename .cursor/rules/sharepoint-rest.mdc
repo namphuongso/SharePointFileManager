@@ -11,14 +11,15 @@ Chỉ **SharePoint REST** `GET {site}/_api/...` qua `SharePointRestClient.get`. 
 ## Endpoint đã dùng (bám doc Microsoft)
 
 - List: `web/lists/getbytitle(...)` hoặc `web/lists` (`BaseTemplate eq 101`)
-- Folder/file: `GetFolderById` / `GetFolderByServerRelativeUrl` + `/Folders` + `/Files`
-- Schema cột (ẩn hiện cột): `web/lists(guid'{id}')/fields` — không suy cột từ `Files`/`Folders`
+- Một cấp file/folder: `GET web/lists(guid'{id}')/items` + `$filter=FileDirRef eq '...'` + `$select=*,File/...,Folder/...,Author/...,Editor/...` + `$expand=File,Folder,Author,Editor`. Query encode `%20`, không `+`. Trang sau: GET `@odata.nextLink`
+- Path folder: `GetFolderById` (`$select=ServerRelativeUrl`)
+- Schema cột: `GET web/lists(guid'{id}')/fields` **không** `$select`
 
-Doc: [lists REST](https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-lists-and-list-items-with-rest), [folders/files REST](https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-folders-and-files-with-rest).
+Doc: [lists REST](https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-lists-and-list-items-with-rest), [OData paging](https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/use-odata-query-operations-in-sharepoint-rest-requests).
 
 ## Query
 
-`$select` chỉ field đang dùng. Quan hệ (`RootFolder`, `Author`, `ListItemAllFields`) cần `$expand`. Không `$select=*`.
+`$select=*` trên items để đủ cột list; property `$expand` phải nằm trong `$select`. `/fields`: không `$select`. Items: `$top` + `@odata.nextLink`, không `$skip`. OData: encode `%20`, không `+`.
 
 ## Cấm
 
@@ -33,5 +34,5 @@ await fetch("https://graph.microsoft.com/v1.0/sites/...");
 await rest.get("web/lists/GetItemsByCustomHack");
 
 // ✅
-await this.rest.get(`${base}/Files`, { query: { $top: top, $select: "Name,UniqueId,TimeLastModified,Length" } });
+await this.rest.get(listItemsPath(listId), { query: listItemsQuery(fileDirRef, 30) });
 ```

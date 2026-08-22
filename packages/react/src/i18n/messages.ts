@@ -11,6 +11,7 @@ const vi: Messages = {
   emptyHint: "Không có tệp hoặc thư mục nào trong thư mục này.",
   retry: "Thử lại",
   refresh: "Làm mới",
+  loadMore: "Tải thêm",
   unknownError: "Đã xảy ra lỗi.",
 };
 
@@ -23,6 +24,7 @@ const en: Messages = {
   emptyHint: "There are no files or folders in this folder.",
   retry: "Retry",
   refresh: "Refresh",
+  loadMore: "Load more",
   unknownError: "Something went wrong.",
 };
 

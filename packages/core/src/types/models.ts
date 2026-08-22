@@ -16,6 +16,32 @@ export interface SharePointItem {
   type: SharePointItemType;
   size?: number;
   lastModifiedDateTime?: string;
+  /** Giá trị cột list (không $select). Key = InternalName / EntityPropertyName. */
+  fields?: Record<string, unknown>;
+}
+
+/** Một trang list items (phân trang @odata.nextLink, không $skip). */
+export interface FolderChildrenPage {
+  items: SharePointItem[];
+  nextLink?: string;
+}
+
+/**
+ * Cột library (SP.Field) để option ẩn/hiện.
+ * `internalName` là key ổn định; `title` là nhãn UI.
+ */
+export interface SharePointField {
+  id?: string;
+  title: string;
+  internalName: string;
+  entityPropertyName?: string;
+  typeAsString?: string;
+  fieldTypeKind?: number;
+  hidden: boolean;
+  readOnly: boolean;
+  required: boolean;
+  sortable?: boolean;
+  filterable?: boolean;
 }
 
 export interface SharePointAppConfig {

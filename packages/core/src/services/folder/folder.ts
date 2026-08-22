@@ -1,14 +1,16 @@
 import type { SharePointRestClient } from "../../rest/client";
-import { mapRestFile, mapRestFolder } from "../../mappers/rest-item";
-import type { LibraryContext, SharePointItem } from "../../types/models";
-import type { ListChildrenOptions, RestFile, RestFolder } from "../../types/rest";
-import { folderChildrenPath, resolveFolderUrl } from "./resolve-folder-url";
-import { sortFolderChildren } from "./sort-folder-children";
+import { mapRestListItem } from "../../mappers/rest-list-item";
+import type { FolderChildrenPage, LibraryContext } from "../../types/models";
+import type { ListChildrenOptions, RestListItem, RestODataCollection } from "../../types/rest";
+import { parseODataCollection, resolveODataNextLink } from "../../utils";
+import { DEFAULT_LIST_PAGE_SIZE, listItemsPath, listItemsQuery } from "./list-items-query";
+import { resolveFolderUrl } from "./resolve-folder-url";
 
 /**
- * Liệt kê một cấp thư mục/file (chỉ đọc).
- * Path gốc lấy từ getLibrary (services/library).
- * @see https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-folders-and-files-with-rest
+ * Liệt kê một cấp file/folder qua list items (chỉ đọc).
+ * Phân trang @odata.nextLink. Không $select — đủ cột trên mỗi dòng.
+ * @see https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-lists-and-list-items-with-rest
+ * @see https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/use-odata-query-operations-in-sharepoint-rest-requests
  */
 export class FolderService {
   constructor(
@@ -19,28 +21,31 @@ export class FolderService {
   async listChildren(
     folderId: string,
     options: ListChildrenOptions = {},
-  ): Promise<SharePointItem[]> {
-    const url = await resolveFolderUrl(this.rest, this.getLibrary, folderId, options.signal);
-    const base = folderChildrenPath(url);
-    const top = options.top ?? 200;
+  ): Promise<FolderChildrenPage> {
+    const body = options.nextLink
+      ? await this.rest.getUrl<RestODataCollection<RestListItem>>(options.nextLink, {
+          signal: options.signal,
+        })
+      : await this.fetchFirstPage(folderId, options);
 
-    const [foldersResult, filesResult] = await Promise.all([
-      this.rest.get<{ value?: RestFolder[] }>(`${base}/Folders`, {
-        query: { $top: top },
-        signal: options.signal,
-      }),
-      this.rest.get<{ value?: RestFile[] }>(`${base}/Files`, {
-        query: { $top: top },
-        signal: options.signal,
-      }),
-    ]);
+    const page = parseODataCollection(body);
+    const items = page.value
+      .map(mapRestListItem)
+      .filter((item): item is NonNullable<typeof item> => item !== undefined);
 
-    // Forms = folder hệ thống của document library, không hiện trên UI.
-    const folders = (foldersResult.value ?? [])
-      .filter((folder) => folder.Name && folder.Name !== "Forms")
-      .map(mapRestFolder);
-    const files = (filesResult.value ?? []).map(mapRestFile);
+    return {
+      items,
+      nextLink: resolveODataNextLink(page.nextLink, this.rest.siteUrl),
+    };
+  }
 
-    return sortFolderChildren([...folders, ...files]);
+  private async fetchFirstPage(folderId: string, options: ListChildrenOptions) {
+    const library = await this.getLibrary();
+    const fileDirRef = await resolveFolderUrl(this.rest, this.getLibrary, folderId, options.signal);
+    const top = options.top ?? DEFAULT_LIST_PAGE_SIZE;
+    return this.rest.get<RestODataCollection<RestListItem>>(listItemsPath(library.listId), {
+      query: listItemsQuery(fileDirRef, top),
+      signal: options.signal,
+    });
   }
 }

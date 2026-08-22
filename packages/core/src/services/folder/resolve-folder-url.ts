@@ -1,5 +1,4 @@
 import type { SharePointRestClient } from "../../rest/client";
-import { escapeODataLiteral } from "../../utils";
 import {
   SharePointError,
   SharePointErrorCode,
@@ -8,8 +7,8 @@ import type { LibraryContext } from "../../types/models";
 import type { RestFolder } from "../../types/rest";
 
 /**
- * UniqueId (breadcrumb) → ServerRelativeUrl vì Folders/Files nhận path.
- * "root" hoặc UniqueId của library = dùng path gốc, không gọi GetFolderById.
+ * UniqueId (breadcrumb) → ServerRelativeUrl cho $filter FileDirRef.
+ * "root" hoặc UniqueId của library = path gốc, không gọi GetFolderById.
  */
 export async function resolveFolderUrl(
   rest: SharePointRestClient,
@@ -33,9 +32,4 @@ export async function resolveFolderUrl(
     });
   }
   return folder.ServerRelativeUrl;
-}
-
-export function folderChildrenPath(serverRelativeUrl: string): string {
-  const encoded = escapeODataLiteral(serverRelativeUrl);
-  return `web/GetFolderByServerRelativeUrl('${encoded}')`;
 }

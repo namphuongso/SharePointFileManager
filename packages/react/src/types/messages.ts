@@ -7,5 +7,6 @@ export interface Messages {
   emptyHint: string;
   retry: string;
   refresh: string;
+  loadMore: string;
   unknownError: string;
 }

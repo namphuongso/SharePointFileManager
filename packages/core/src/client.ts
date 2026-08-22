@@ -1,5 +1,6 @@
 import { resolveConfig } from "./config/resolve-config";
 import { SharePointRestClient } from "./rest/client";
+import { FieldService } from "./services/fields";
 import { FolderService } from "./services/folder";
 import { resolveLibrary } from "./services/library";
 import type {
@@ -10,13 +11,14 @@ import type {
 } from "./types/models";
 
 /**
- * Lớp ghép core: token + REST + cache thư viện + FolderService.
- * UI không fetch trực tiếp — mọi GET đi qua this.rest / this.folders.
+ * Lớp ghép core: token + REST + cache thư viện + FolderService + FieldService.
+ * UI không fetch trực tiếp — mọi GET đi qua this.rest / this.folders / this.fields.
  */
 export class SharePointClient {
   readonly config: ResolvedSharePointConfig;
   readonly rest: SharePointRestClient;
   readonly folders: FolderService;
+  readonly fields: FieldService;
 
   private libraryPromise?: Promise<LibraryContext>;
 
@@ -29,6 +31,7 @@ export class SharePointClient {
       fetchImpl,
     });
     this.folders = new FolderService(this.rest, () => this.getLibrary());
+    this.fields = new FieldService(this.rest, () => this.getLibrary());
   }
 
   get tokenProvider(): TokenProvider {
@@ -39,7 +42,7 @@ export class SharePointClient {
     return this.config.libraryName ?? "default";
   }
 
-  /** Tìm document library một lần rồi dùng lại cho mọi lần listChildren. */
+  /** Tìm document library một lần rồi dùng lại cho listChildren và list fields. */
   async getLibrary(): Promise<LibraryContext> {
     this.libraryPromise ??= resolveLibrary(
       this.rest,

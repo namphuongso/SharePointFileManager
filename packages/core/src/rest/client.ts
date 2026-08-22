@@ -31,6 +31,14 @@ export class SharePointRestClient {
     return this.request<T>({ ...options, path, method: "GET" });
   }
 
+  /** GET URL tuyệt đối (trang sau `@odata.nextLink`). */
+  async getUrl<T>(
+    url: string,
+    options: Omit<RestRequestOptions, "path" | "method" | "query" | "absoluteUrl"> = {},
+  ): Promise<T> {
+    return this.request<T>({ ...options, path: "", absoluteUrl: url, method: "GET" });
+  }
+
   async request<T>(options: RestRequestOptions): Promise<T> {
     const fetchImpl = this.options.fetchImpl ?? fetch;
     const method = options.method ?? "GET";
