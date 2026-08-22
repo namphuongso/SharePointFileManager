@@ -1,10 +1,6 @@
 import type { SharePointItem, SharePointItemType } from "../types/models";
 import type { RestFile, RestFolder } from "../types/rest";
-
-function requireUniqueId(id: string | undefined, kind: "file" | "folder"): string {
-  if (!id) throw new Error(`SharePoint ${kind} is missing UniqueId`);
-  return id;
-}
+import { requireUniqueId } from "../utils";
 
 function mapRestItem(
   type: SharePointItemType,
@@ -27,7 +23,7 @@ export function mapRestFile(file: RestFile): SharePointItem {
   );
 }
 
-/** JSON SP.Folder → SharePointItem. */
+/** JSON SP.Folder → SharePointItem. Thiếu UniqueId thì không dùng làm key UI được. */
 export function mapRestFolder(folder: RestFolder): SharePointItem {
   return mapRestItem(
     "folder",
