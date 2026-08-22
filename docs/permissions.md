@@ -1,43 +1,26 @@
-# Microsoft Entra delegated permissions
+# Microsoft Entra delegated permissions (SharePoint REST)
 
-Library dùng **delegated** token của user đang login. Không dùng application permissions, không dùng client secret.
+Library dùng **delegated** token của user đang login, audience **SharePoint**.
 
 ## Default scopes
 
-```text
-Files.ReadWrite
-Sites.ReadWrite.All
-User.Read.All
-People.Read
-Directory.Read.All
+```ts
+defaultSharePointScopes("https://contoso.sharepoint.com/sites/eOffice")
+// → ["https://contoso.sharepoint.com/AllSites.Write"]
 ```
 
-Đủ browse + upload + share + people picker trên document library. Browse khi `children` rỗng dùng list-item `$expand=driveItem` (không cần `Files.Read.All` / `sharedWithMe`).
+Entra app registration → API permissions → **SharePoint** → Delegated:
 
-## Least privilege theo feature
+- `AllSites.Read` / `AllSites.Write` (đúng tên trên portal; không phải `AllSites.ReadWrite`)
+- Bấm **Grant admin consent**
 
-| Feature | Quyền tối thiểu (tham khảo Graph docs) |
-|---|---|
-| List / download / search / preview / versions | `Files.ReadWrite` hoặc `Sites.Read.All` / `Sites.ReadWrite.All` trên SharePoint site |
-| Security-trimmed library listing (`lists/.../items?$expand=driveItem`) | `Sites.Read.All` / `Sites.ReadWrite.All` |
-| Upload / rename / delete / copy / move / folder | `Files.ReadWrite` / `Sites.ReadWrite.All` |
-| Invite / createLink / remove permission | `Files.ReadWrite` ; với library SharePoint thường cần `Sites.ReadWrite.All` |
-| People picker (tên người / nhóm trong tenant) | `People.Read` + `User.Read.All` ; nhóm cần `Directory.Read.All` |
+Đưa scope SharePoint vào MSAL `loginRequest` / silent acquire để tránh consent lần hai.
 
-`Sites.Selected` có thể hẹp hơn nhưng phải được admin gán site; không mặc định.
+## App registration checklist
 
-Không cấp Application `Sites.ReadWrite.All` cho SPA.
+1. SPA redirect URI
+2. SharePoint delegated permissions (không chỉ Graph Files.*)
+3. Grant admin consent
+4. Host truyền `siteUrl` + `tokenProvider` (+ optional `scopes`)
 
-## App registration
-
-1. Entra ID → App registrations → app **của project** (đã là SPA)
-2. Authentication: SPA redirect URI đã có
-3. API permissions → Microsoft Graph → Delegated → thêm quyền trên
-4. Grant admin consent
-5. Đưa scopes vào MSAL `loginRequest`
-
-Mỗi project dùng `clientId` / `siteId` / `driveId` của project đó.
-
-## Permission safety
-
-Microsoft Graph không trả về `inheritedFrom` ổn định cho OneDrive for Business/SharePoint document libraries. Library chỉ hiển thị thao tác Remove cho sharing link trực tiếp; permission user/group được coi là không xác định để tránh xóa nhầm ACL kế thừa.
+Không cấp client secret vào frontend.

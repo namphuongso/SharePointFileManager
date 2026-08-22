@@ -2,6 +2,7 @@ import { InteractionStatus } from "@azure/msal-browser";
 import { useMsal } from "@azure/msal-react";
 import {
   createMsalTokenProvider,
+  defaultSharePointScopes,
   SharePointAppProvider,
   SharePointFileManager,
 } from "@namphuongso/sharepoint-file-manager";
@@ -16,9 +17,12 @@ import "@namphuongso/sharepoint-file-manager/styles.css";
 export function App() {
   const { instance, accounts, inProgress } = useMsal();
   const account = accounts[0];
-  const siteId = import.meta.env.VITE_SITE_ID as string | undefined;
   const siteUrl = import.meta.env.VITE_SITE_URL as string | undefined;
   const libraryName = (import.meta.env.VITE_LIBRARY_NAME as string | undefined) || "Documents";
+  const scopes = useMemo(
+    () => (siteUrl ? defaultSharePointScopes(siteUrl) : []),
+    [siteUrl],
+  );
 
   const tokenProvider = useMemo(() => {
     if (!account) return undefined;
@@ -33,18 +37,24 @@ export function App() {
     return (
       <main style={{ minHeight: "100vh", background: "#f5f5f5" }}>
         <h1>SharePoint File Manager</h1>
-        <button type="button" onClick={() => instance.loginRedirect({ scopes: ["Files.ReadWrite", "Sites.ReadWrite.All"] })}>
+        <button
+          type="button"
+          onClick={() =>
+            instance.loginRedirect({
+              scopes: scopes.length > 0 ? scopes : ["https://tcsvn.sharepoint.com/AllSites.Write"],
+            })
+          }
+        >
           Sign in with Microsoft
         </button>
       </main>
     );
   }
 
-  if (!siteId && !siteUrl) {
+  if (!siteUrl) {
     return (
       <p style={{ padding: 24 }}>
-        Set <code>VITE_SITE_ID</code> or <code>VITE_SITE_URL</code> (and optional{" "}
-        <code>VITE_LIBRARY_NAME</code>) in .env.local
+        Set <code>VITE_SITE_URL</code> (and optional <code>VITE_LIBRARY_NAME</code>) in .env.local
       </p>
     );
   }
@@ -53,8 +63,8 @@ export function App() {
     <SharePointAppProvider
       locale="vi-VN"
       config={{
-        siteId,
         siteUrl,
+        scopes,
         tokenProvider,
       }}
     >

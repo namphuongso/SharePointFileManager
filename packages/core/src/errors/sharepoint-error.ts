@@ -6,7 +6,6 @@ export const SharePointErrorCode = {
   TooLarge: "TooLarge",
   Throttled: "Throttled",
   NetworkError: "NetworkError",
-  InteractionRequired: "InteractionRequired",
   Unsupported: "Unsupported",
   Cancelled: "Cancelled",
   Unknown: "Unknown",
@@ -18,14 +17,14 @@ export type SharePointErrorCode =
 export class SharePointError extends Error {
   readonly code: SharePointErrorCode;
   readonly status?: number;
-  readonly graphCode?: string;
+  readonly restCode?: string;
   readonly retryAfterMs?: number;
 
   constructor(options: {
     code: SharePointErrorCode;
     message: string;
     status?: number;
-    graphCode?: string;
+    restCode?: string;
     retryAfterMs?: number;
     cause?: unknown;
   }) {
@@ -33,7 +32,7 @@ export class SharePointError extends Error {
     this.name = "SharePointError";
     this.code = options.code;
     this.status = options.status;
-    this.graphCode = options.graphCode;
+    this.restCode = options.restCode;
     this.retryAfterMs = options.retryAfterMs;
   }
 }

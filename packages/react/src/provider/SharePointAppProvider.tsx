@@ -1,29 +1,21 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type {
-  NotifyPayload,
   ResolvedSharePointAppConfig,
   SharePointAppConfig,
   SharePointConfig,
   SharePointLibraryTarget,
 } from "@namphuongso/sharepoint-file-manager-core";
 import { createSharePointConfig } from "@namphuongso/sharepoint-file-manager-core";
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { useSharePointSite } from "../hooks/hooks";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Messages } from "../i18n/messages";
 
 export interface SharePointAppProviderProps {
-  /**
-   * Site + token + scopes + default features — configure once at app root.
-   * Use `siteUrl` or `siteId`; when only `siteUrl` is set, the provider resolves Graph site id.
-   */
   config: SharePointAppConfig;
   locale?: string;
   messages?: Partial<Messages>;
-  onNotify?: (payload: NotifyPayload) => void;
   children: ReactNode;
 }
 
-export type SharePointAppStatus = "loading" | "ready" | "error";
+export type SharePointAppStatus = "ready" | "error";
 
 interface SharePointAppContextValue {
   appConfig: ResolvedSharePointAppConfig | null;
@@ -31,56 +23,37 @@ interface SharePointAppContextValue {
   error: unknown;
   locale?: string;
   messages?: Partial<Messages>;
-  onNotify?: (payload: NotifyPayload) => void;
-  /** Merge a per-route library target onto the resolved app config. */
   createConfig: (target?: SharePointLibraryTarget) => SharePointConfig;
 }
 
 const SharePointAppContext = createContext<SharePointAppContextValue | null>(null);
 
-function SharePointAppProviderInner({
+export function SharePointAppProvider({
   config,
   locale,
   messages,
-  onNotify,
   children,
 }: SharePointAppProviderProps) {
-  const needsResolve = Boolean(config.siteUrl?.trim() && !config.siteId?.trim());
-
-  const siteQuery = useSharePointSite(
-    needsResolve
-      ? {
-          tokenProvider: config.tokenProvider,
-          siteUrl: config.siteUrl!.trim(),
-          scopes: config.scopes,
-          graphBaseUrl: config.graphBaseUrl,
-        }
-      : undefined,
-  );
-
-  const siteId = (config.siteId?.trim() || siteQuery.data?.id || "").trim() || undefined;
-
-  const status: SharePointAppStatus = !siteId
-    ? needsResolve && siteQuery.isLoading
-      ? "loading"
-      : siteQuery.isError
-        ? "error"
-        : "loading"
-    : "ready";
+  const siteUrl = config.siteUrl?.trim() ?? "";
+  const status: SharePointAppStatus = siteUrl ? "ready" : "error";
+  const error = siteUrl ? undefined : new Error("SharePointAppProvider requires config.siteUrl");
 
   const resolvedAppConfig = useMemo<ResolvedSharePointAppConfig | null>(() => {
-    if (!siteId) return null;
-    return { ...config, siteId };
-  }, [config, siteId]);
+    if (!siteUrl) return null;
+    return {
+      ...config,
+      siteUrl,
+      siteId: config.siteId?.trim() || siteUrl,
+    };
+  }, [config, siteUrl]);
 
   const value = useMemo<SharePointAppContextValue>(
     () => ({
       appConfig: resolvedAppConfig,
       status,
-      error: siteQuery.error,
+      error,
       locale,
       messages,
-      onNotify,
       createConfig: (target = {}) => {
         if (!resolvedAppConfig) {
           throw new Error("SharePoint app config is not ready yet");
@@ -88,38 +61,16 @@ function SharePointAppProviderInner({
         return createSharePointConfig(resolvedAppConfig, target);
       },
     }),
-    [resolvedAppConfig, status, siteQuery.error, locale, messages, onNotify],
+    [resolvedAppConfig, status, error, locale, messages],
   );
 
   return <SharePointAppContext.Provider value={value}>{children}</SharePointAppContext.Provider>;
 }
 
-/**
- * Host app root: pass site + token once. Feature routes only use `libraryName`.
- *
- * ```tsx
- * <SharePointAppProvider config={{ siteUrl, tokenProvider, features }}>
- *   <App />
- * </SharePointAppProvider>
- *
- * // route
- * <SharePointFileManager libraryName="eDocumentTest" />
- * ```
- */
-export function SharePointAppProvider(props: SharePointAppProviderProps) {
-  const [queryClient] = useState(() => new QueryClient());
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <SharePointAppProviderInner {...props} />
-    </QueryClientProvider>
-  );
-}
-
 export function useSharePointApp(): SharePointAppContextValue {
   const value = useContext(SharePointAppContext);
   if (!value) {
-    throw new Error("useSharePointApp must be used inside SharePointAppProvider");
+    throw new Error("useSharePointApp must be used within SharePointAppProvider");
   }
   return value;
 }

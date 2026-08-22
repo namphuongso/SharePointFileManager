@@ -2,7 +2,7 @@
   "name": "sharepoint-file-manager",
   "private": true,
   "version": "0.1.0",
-  "description": "Reusable React library for SharePoint file management via Microsoft Graph",
+  "description": "Reusable React library for SharePoint file management via SharePoint REST",
   "workspaces": [
     "packages/*",
     "examples/*"

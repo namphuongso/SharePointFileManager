@@ -1,27 +1,23 @@
 import { SharePointError, SharePointErrorCode } from "./sharepoint-error";
 
-interface GraphErrorBody {
+interface RestErrorBody {
   error?: {
     code?: string;
-    message?: string;
-    innerError?: { code?: string; message?: string };
+    message?: { value?: string } | string;
+  };
+  "odata.error"?: {
+    code?: string;
+    message?: { value?: string };
   };
 }
 
-const GRAPH_CODE_MAP: Record<string, SharePointErrorCode> = {
-  unauthenticated: SharePointErrorCode.Unauthorized,
+const REST_CODE_MAP: Record<string, SharePointErrorCode> = {
+  "-2147024891, System.UnauthorizedAccessException": SharePointErrorCode.Forbidden,
   accessDenied: SharePointErrorCode.Forbidden,
-  forbidden: SharePointErrorCode.Forbidden,
+  unauthorized: SharePointErrorCode.Unauthorized,
+  "-2147024894, System.IO.FileNotFoundException": SharePointErrorCode.NotFound,
   itemNotFound: SharePointErrorCode.NotFound,
-  notFound: SharePointErrorCode.NotFound,
-  nameAlreadyExists: SharePointErrorCode.Conflict,
-  resourceModified: SharePointErrorCode.Conflict,
-  activityLimitReached: SharePointErrorCode.Throttled,
-  tooManyRetries: SharePointErrorCode.Throttled,
-  maxFileSizeExceeded: SharePointErrorCode.TooLarge,
-  invalidRequest: SharePointErrorCode.Unknown,
-  notSupported: SharePointErrorCode.Unsupported,
-  notAllowed: SharePointErrorCode.Forbidden,
+  "-2130575257, Microsoft.SharePoint.SPException": SharePointErrorCode.Conflict,
 };
 
 export function mapStatusToCode(status: number): SharePointErrorCode {
@@ -44,27 +40,27 @@ export function parseRetryAfterMs(header: string | null): number | undefined {
   return undefined;
 }
 
-export function mapGraphError(input: {
+export function mapRestError(input: {
   status: number;
   body?: unknown;
   retryAfter?: string | null;
   fallbackMessage?: string;
 }): SharePointError {
-  const graph = input.body as GraphErrorBody | undefined;
-  const graphCode = graph?.error?.code ?? graph?.error?.innerError?.code;
+  const body = input.body as RestErrorBody | undefined;
+  const err = body?.error ?? body?.["odata.error"];
+  const rawMessage = err?.message;
   const message =
-    graph?.error?.message ??
+    (typeof rawMessage === "string" ? rawMessage : rawMessage?.value) ??
     input.fallbackMessage ??
-    `Microsoft Graph request failed with status ${input.status}`;
-
-  const code =
-    (graphCode && GRAPH_CODE_MAP[graphCode]) || mapStatusToCode(input.status);
+    `SharePoint REST request failed with status ${input.status}`;
+  const restCode = err?.code;
+  const code = (restCode && REST_CODE_MAP[restCode]) || mapStatusToCode(input.status);
 
   return new SharePointError({
     code,
     message,
     status: input.status,
-    graphCode,
+    restCode,
     retryAfterMs: parseRetryAfterMs(input.retryAfter ?? null),
   });
 }

@@ -2,16 +2,15 @@ import type { SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
 
 export type FileKind = "folder" | "word" | "excel" | "powerpoint" | "pdf" | "image" | "video" | "archive" | "generic";
 
-export function getFileKind(item: SharePointItem): FileKind {
+function getFileKind(item: SharePointItem): FileKind {
   if (item.type === "folder") return "folder";
   const name = item.name.toLowerCase();
-  const mime = item.mimeType?.toLowerCase() ?? "";
-  if (/\.(doc|docx|dotx)$/.test(name) || mime.includes("word")) return "word";
-  if (/\.(xls|xlsx|xlsm|csv)$/.test(name) || mime.includes("excel") || mime.includes("spreadsheet")) return "excel";
-  if (/\.(ppt|pptx|ppsx)$/.test(name) || mime.includes("powerpoint") || mime.includes("presentation")) return "powerpoint";
-  if (name.endsWith(".pdf") || mime.includes("pdf")) return "pdf";
-  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name) || mime.startsWith("image/")) return "image";
-  if (/\.(mp4|mov|avi|wmv|webm)$/.test(name) || mime.startsWith("video/")) return "video";
+  if (/\.(doc|docx|dotx)$/.test(name)) return "word";
+  if (/\.(xls|xlsx|xlsm|csv)$/.test(name)) return "excel";
+  if (/\.(ppt|pptx|ppsx)$/.test(name)) return "powerpoint";
+  if (name.endsWith(".pdf")) return "pdf";
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name)) return "image";
+  if (/\.(mp4|mov|avi|wmv|webm)$/.test(name)) return "video";
   if (/\.(zip|rar|7z|tar|gz)$/.test(name)) return "archive";
   return "generic";
 }
@@ -89,9 +88,4 @@ export function FileTypeIcon({ item, size = "md" }: { item: SharePointItem; size
   if (kind === "folder") return <FolderIcon size={px} />;
   const style = FILE_ICONS[kind];
   return <DocumentIcon color={style.color} accent={style.accent} glyph={style.glyph} size={px} />;
-}
-
-export function FileTypeChipIcon({ kind, size = 20 }: { kind: Exclude<FileKind, "folder" | "generic">; size?: number }) {
-  const style = FILE_ICONS[kind];
-  return <DocumentIcon color={style.color} accent={style.accent} glyph={style.glyph} size={size} />;
 }

@@ -1,41 +1,15 @@
 # Troubleshooting
 
-## Login lần hai / popup MSAL
+## Login / popup MSAL
 
-Library không được tự login. Chỉ truyền `createMsalTokenProvider({ instance, account })` từ **cùng** `PublicClientApplication` của app.
+Library không tự login. Host truyền `tokenProvider` từ cùng `PublicClientApplication`.
 
-## 401 liên tục
+## 401
 
-- Account chưa login
-- Scopes Graph chưa consent
-- App registration chưa có Graph delegated permissions
+- Chưa login
+- Scope `AllSites.Write` chưa consent
+- App registration thiếu SharePoint delegated permission
 
-Xin scopes lúc login hoặc admin consent.
+## Token backend không gọi được SharePoint
 
-## 403 khi share / Anyone
-
-Tenant có thể tắt anonymous link. Dùng `organization` hoặc `users`. Đây không phải bug library.
-
-## 403 khi Remove access
-
-Permission đang inherited. UI phải hiện "Kế thừa từ thư mục cha" và không gọi DELETE.
-
-## People picker trống khi share
-
-Token Graph phải có `People.Read` / `User.Read.All`. App registration cần delegated permissions đó và đã consent. Vẫn có thể gõ nguyên email rồi Gửi.
-
-## Token backend không gọi được Graph
-
-Đúng. Access token của API nội bộ không dùng cho Graph. Phải `acquireTokenSilent` với Graph scopes.
-
-## Preview trống
-
-Graph preview chủ yếu Office / PDF / ảnh. File khác: Open in SharePoint.
-
-## Copy treo
-
-Copy Graph là async (202). Nếu monitor URL fail, kiểm tra CORS/auth của Location header.
-
-## Tailwind đụng class host
-
-Library dùng prefix `spm-` và CSS đã compile. Host chỉ import `styles.css`.
+Access token API nội bộ không dùng cho SharePoint REST. Phải `acquireTokenSilent` với SharePoint scopes.

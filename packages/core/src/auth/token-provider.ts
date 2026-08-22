@@ -11,10 +11,14 @@ export interface TokenProvider {
   getAccessToken(request: TokenRequest): Promise<string>;
 }
 
-export const DEFAULT_GRAPH_SCOPES = [
-  "Files.ReadWrite",
-  "Sites.ReadWrite.All",
-  "User.Read.All",
-  "People.Read",
-  "Directory.Read.All",
-] as const;
+/**
+ * Build delegated SharePoint resource scopes for a site URL.
+ * Matches Entra SharePoint permission **AllSites.Write** (read + write all site collections).
+ * @see https://learn.microsoft.com/en-us/sharepoint/dev/spfx/use-aadhttpclient
+ */
+export function defaultSharePointScopes(siteUrl: string): string[] {
+  const origin = new URL(siteUrl).origin;
+  return [`${origin}/AllSites.Write`];
+}
+
+export const DEFAULT_SHAREPOINT_SCOPE_SUFFIX = "AllSites.Write";

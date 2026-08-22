@@ -1,65 +1,27 @@
 # Architecture
 
-## Nguyên tắc
-
-- SharePoint Online là nguồn dữ liệu và nguồn sự thật về quyền.
-- Microsoft Entra ID là identity provider.
-- Microsoft Graph là API layer.
-- Library không lưu ACL, không mirror permission, không chứa client secret.
+- SharePoint Online là nguồn dữ liệu.
+- Entra ID là identity.
+- API: **SharePoint REST** `GET /_api` (chỉ đọc danh sách). Không dùng Microsoft Graph.
 
 ```text
 Application (MSAL already signed in)
-    │ TokenProvider / createMsalTokenProvider
+    │ TokenProvider
     ▼
-@namphuongso/sharepoint-file-manager   React UI, hooks, TanStack Query
-    │ bundles
+@namphuongso/sharepoint-file-manager   list UI
     ▼
-@namphuongso/sharepoint-file-manager-core   GraphClient + services
-    ▼
-Microsoft Graph v1.0
+@namphuongso/sharepoint-file-manager-core   REST GET + FolderService.listChildren
     ▼
 SharePoint Online
 ```
 
 ## Packages
 
-| Package | Publish | Vai trò |
-|---|---|---|
-| `packages/core` | private workspace | TokenProvider, Graph client, domain model, services |
-| `packages/react` | `@namphuongso/sharepoint-file-manager` | UI + hooks; giữ core là dependency external để bundle browser không kéo nhánh Node vào client |
+| Package | Vai trò |
+|---|---|
+| `packages/core` | Token, REST GET client, resolve library, list folders/files |
+| `packages/react` | Bảng danh sách + breadcrumb |
 
-React components không `fetch` Graph. Mọi request đi qua `GraphClient`.
+UI không `fetch` trực tiếp. Mọi request đi qua `SharePointRestClient.get`.
 
-## Auth
-
-Production chỉ có:
-
-```ts
-createMsalTokenProvider({ instance, account })
-```
-
-Library không tạo `PublicClientApplication`, không `loginPopup` / `loginRedirect`.
-
-## State
-
-TanStack Query cache folder children (paged + infinite), accessible library items, search, permissions, versions. Mutations (upload, rename, delete, copy, move, checkout, restore) invalidate `children`, `children-infinite`, and `accessible-library-items` for the affected folder/library.
-
-## Embed model
-
-```text
-SharePointAppProvider (siteId + token + features)     ← config một lần ở app
-    └── SharePointFileManager libraryName="…"         ← từng module/route
-            └── embedded UI = command bar + file list  ← không header / shell nav
-```
-
-Standalone demo có thể truyền `config` đầy đủ + `embedded={false}` để hiện full `SharePointShell`.
-
-## UI / Tailwind
-
-Class prefix `spm-`. Host import `styles.css` đã compile. Không bắt host scan source Tailwind của library.
-
-## Ngoài v1
-
-- Theme package riêng
-- Library tự MSAL login
-- Retention
+Hiện **không** có upload, share, checkout, search, permissions UI.

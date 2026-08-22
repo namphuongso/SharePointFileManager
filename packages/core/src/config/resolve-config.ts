@@ -1,49 +1,21 @@
-import { DEFAULT_GRAPH_SCOPES } from "../auth/token-provider";
-import type {
-  FeatureConfig,
-  ResolvedSharePointConfig,
-  SharePointConfig,
-} from "../types/models";
-
-export const DEFAULT_FEATURES: Required<FeatureConfig> = {
-  upload: true,
-  download: true,
-  createFolder: true,
-  rename: true,
-  delete: true,
-  copy: true,
-  move: true,
-  share: true,
-  manageAccess: true,
-  search: true,
-  preview: true,
-  versionHistory: true,
-  openInSharePoint: true,
-  properties: true,
-  checkout: true,
-  globalSearch: true,
-  metadata: true,
-  activityLog: true,
-  infiniteScroll: true,
-  dragDropMove: true,
-  bulkMetadata: true,
-  copyProgress: true,
-};
+import { defaultSharePointScopes } from "../auth/token-provider";
+import type { ResolvedSharePointConfig, SharePointConfig } from "../types/models";
 
 export function resolveConfig(config: SharePointConfig): ResolvedSharePointConfig {
-  if (!config.siteId) {
-    throw new Error("SharePointConfig.siteId is required");
+  const siteUrl = config.siteUrl?.trim();
+  if (!siteUrl) {
+    throw new Error("SharePointConfig.siteUrl is required (SharePoint REST base URL)");
   }
   if (!config.tokenProvider) {
     throw new Error("SharePointConfig.tokenProvider is required");
   }
 
+  const normalizedUrl = siteUrl.replace(/\/$/, "");
   return {
     ...config,
-    siteId: config.siteId,
+    siteUrl: normalizedUrl,
+    siteId: config.siteId?.trim() || normalizedUrl,
     rootItemId: config.rootItemId ?? "root",
-    scopes: config.scopes ?? [...DEFAULT_GRAPH_SCOPES],
-    graphBaseUrl: config.graphBaseUrl ?? "https://graph.microsoft.com/v1.0",
-    features: { ...DEFAULT_FEATURES, ...config.features },
+    scopes: config.scopes?.length ? config.scopes : defaultSharePointScopes(normalizedUrl),
   };
 }
