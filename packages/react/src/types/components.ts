@@ -1,4 +1,10 @@
-import type { SharePointConfig, SharePointItem, SharePointLibraryTarget } from "@namphuongso/sharepoint-file-manager-core";
+import type {
+  ListChildrenSort,
+  ListSortDirection,
+  SharePointConfig,
+  SharePointItem,
+  SharePointLibraryTarget,
+} from "@namphuongso/sharepoint-file-manager-core";
 import type { Messages } from "./messages";
 
 export interface SharePointFileManagerProps extends SharePointLibraryTarget {
@@ -30,7 +36,37 @@ export interface FileListProps {
   onOpenFolder: (item: SharePointItem) => void;
   /** Nhãn 3 cột cố định theo SharePoint locale; thiếu thì fallback messages. */
   fixedTitles?: { name?: string; modified?: string; size?: string };
-  extraColumns?: { internalName: string; title: string }[];
+  extraColumns?: { internalName: string; title: string; typeAsString?: string }[];
+  sort?: ListChildrenSort;
+  onSort?: (field: string, direction: ListSortDirection, typeAsString?: string) => void;
+  /** Nhóm menu thêm — nối sau sort. */
+  extraColumnMenuGroups?: ColumnMenuGroup[];
+}
+
+/** Một dòng trong menu header cột; `submenu` để thêm cấp sau này. */
+export interface ColumnMenuItem {
+  id: string;
+  label: string;
+  disabled?: boolean;
+  checked?: boolean;
+  submenu?: ColumnMenuItem[];
+  onClick?: () => void;
+}
+
+export interface ColumnMenuGroup {
+  id: string;
+  items: ColumnMenuItem[];
+}
+
+export interface ColumnHeaderMenuProps {
+  title: string;
+  field: string;
+  typeAsString?: string;
+  sort?: ListChildrenSort;
+  onSort?: (field: string, direction: ListSortDirection, typeAsString?: string) => void;
+  messages: Messages;
+  className: string;
+  extraGroups?: ColumnMenuGroup[];
 }
 
 export interface EmptyStateProps {

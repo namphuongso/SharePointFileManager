@@ -18,6 +18,7 @@ export {
   resolveAppConfig,
   isSharePointError,
   FIXED_LIBRARY_FIELD_NAMES,
+  isSortableLibraryField,
 } from "@namphuongso/sharepoint-file-manager-core";
 
 export type {
@@ -30,6 +31,8 @@ export type {
   SharePointItem,
   SharePointField,
   FolderChildrenPage,
+  ListChildrenSort,
+  ListSortDirection,
 } from "@namphuongso/sharepoint-file-manager-core";
 
 export type {

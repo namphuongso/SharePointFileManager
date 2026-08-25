@@ -86,8 +86,9 @@ export const useFileManagerStyles = makeStyles({
   },
   headerTitle: {
     display: "block",
+    minWidth: "0",
     paddingLeft: "8px",
-    paddingRight: "8px",
+    paddingRight: "4px",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -95,6 +96,37 @@ export const useFileManagerStyles = makeStyles({
     fontSize: tokens.fontSizeBase300,
     fontWeight: tokens.fontWeightBold,
     lineHeight: tokens.lineHeightBase300,
+  },
+  headerMenuButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    maxWidth: "100%",
+    height: "100%",
+    margin: "0",
+    padding: "0",
+    border: "none",
+    backgroundColor: "transparent",
+    cursor: "pointer",
+    color: "inherit",
+    font: "inherit",
+    textAlign: "left",
+  },
+  headerChevron: {
+    flexShrink: 0,
+    color: tokens.colorNeutralForeground3,
+  },
+  headerMenuButtonSorted: {
+    color: tokens.colorNeutralForeground1,
+  },
+  headerSortGlyph: {
+    flexShrink: 0,
+    color: tokens.colorBrandForeground1,
+  },
+  headerMenuPopover: {
+    minWidth: "220px",
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke3}`,
+    borderRadius: tokens.borderRadiusLarge,
+    boxShadow: tokens.shadow8,
   },
   row: {
     cursor: "default",
@@ -171,8 +203,13 @@ export const useFileManagerStyles = makeStyles({
   },
   loadMore: {
     display: "flex",
-    justifyContent: "flex-start",
+    flexDirection: "column",
+    alignItems: "flex-start",
     padding: "8px 12px 16px",
+  },
+  loadMoreSentinel: {
+    height: "1px",
+    width: "100%",
   },
   loadMoreButton: {
     borderRadius: tokens.borderRadiusCircular,

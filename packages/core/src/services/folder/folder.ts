@@ -6,6 +6,7 @@ import type { FolderChildrenPage, LibraryContext } from "../../types/models";
 import type { ListChildrenOptions, RestListItem, RestODataCollection } from "../../types/rest";
 import { parseODataCollection, resolveODataNextLink } from "../../utils";
 import { selectableItemFieldNames } from "../fields/item-fields";
+import { listItemsOrderby } from "./list-items-orderby";
 import { DEFAULT_LIST_PAGE_SIZE, listItemsPath, listItemsQuery } from "./list-items-query";
 import { resolveFolderUrl } from "./resolve-folder-url";
 
@@ -65,10 +66,16 @@ export class FolderService {
           knownFields.map((field) => field.internalName),
         );
         this.itemFieldNames = selectedFields;
+        const sortField = knownFields.find((field) => field.internalName === options.sort?.field);
         return await this.rest.get<RestODataCollection<RestListItem>>(
           listItemsPath(library.listId),
           {
-            query: listItemsQuery(fileDirRef, top, selectedFields),
+            query: listItemsQuery(
+              fileDirRef,
+              top,
+              selectedFields,
+              listItemsOrderby(options.sort, sortField?.typeAsString),
+            ),
             signal: options.signal,
           },
         );

@@ -92,12 +92,23 @@ export interface MapRestErrorInput {
   fallbackMessage?: string;
 }
 
+/** Chiều $orderby OData trên list items. */
+export type ListSortDirection = "asc" | "desc";
+
+/** Cột sort trang đầu — InternalName SharePoint, không sort client. */
+export interface ListChildrenSort {
+  field: string;
+  direction: ListSortDirection;
+}
+
 /** Tùy chọn list một cấp folder (FolderService.listChildren). */
 export interface ListChildrenOptions {
   /** Số dòng một trang — mặc định 30 như view SharePoint. */
   top?: number;
   /** Trang sau: GET nguyên @odata.nextLink. */
   nextLink?: string;
+  /** Chỉ trang đầu; nextLink đã mang $orderby. */
+  sort?: ListChildrenSort;
   signal?: AbortSignal;
 }
 

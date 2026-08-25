@@ -19,6 +19,7 @@ export function listItemsQuery(
   fileDirRef: string,
   top: number,
   fieldInternalNames: readonly string[],
+  orderby: string,
 ) {
   const path = fileDirRef.replace(/\/+$/, "") || "/";
   return {
@@ -26,6 +27,6 @@ export function listItemsQuery(
     $top: top,
     $select: listItemSelect(fieldInternalNames),
     $expand: listItemExpand(fieldInternalNames),
-    $orderby: "FSObjType desc,FileLeafRef",
+    $orderby: orderby,
   };
 }

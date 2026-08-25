@@ -11,7 +11,7 @@ export type { SharePointErrorOptions } from "./types/errors";
 export { mapRestError } from "./errors/map-rest-error";
 export { mapStatusToCode } from "./errors/map-status-to-code";
 
-export { FolderService } from "./services/folder";
+export { FolderService, isSortableLibraryField } from "./services/folder";
 export {
   FieldService,
   FIXED_LIBRARY_FIELD_NAMES,
@@ -32,3 +32,4 @@ export type {
   FolderChildrenPage,
   LibraryContext,
 } from "./types/models";
+export type { ListChildrenSort, ListSortDirection } from "./types/rest";

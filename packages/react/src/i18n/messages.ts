@@ -22,6 +22,14 @@ const vi: Messages = {
   moreColumns: "Thêm cột",
   itemCount: "{count} khoản mục",
   language: "Ngôn ngữ",
+  sortAscending: "Tăng dần",
+  sortDescending: "Giảm dần",
+  sortAZ: "A đến Z",
+  sortZA: "Z đến A",
+  sortOldest: "Cũ nhất trước",
+  sortNewest: "Mới nhất trước",
+  sortSmallest: "Nhỏ đến lớn",
+  sortLargest: "Lớn đến nhỏ",
   fieldLabels: {},
 };
 
@@ -41,6 +49,14 @@ const en: Messages = {
   moreColumns: "More columns",
   itemCount: "{count} items",
   language: "Language",
+  sortAscending: "Ascending",
+  sortDescending: "Descending",
+  sortAZ: "A to Z",
+  sortZA: "Z to A",
+  sortOldest: "Older to newer",
+  sortNewest: "Newer to older",
+  sortSmallest: "Smaller to larger",
+  sortLargest: "Larger to smaller",
   fieldLabels: {},
 };
 

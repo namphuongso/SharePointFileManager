@@ -5,18 +5,24 @@ import {
   TableBody,
   TableCell,
   TableHeader,
-  TableHeaderCell,
   TableRow,
   mergeClasses,
 } from "@fluentui/react-components";
 import type { FileListProps } from "../../types";
 import { formatBytes, formatItemCount, formatRelativeDate } from "../../utils/format";
+import { ColumnHeaderMenu } from "./ColumnHeaderMenu";
 import { FileTypeIcon } from "./FileTypeIcon";
 import { useFileManagerStyles } from "./useFileManagerStyles";
 
 /** Tổng số con trực tiếp — Folder.ItemCount, không $select computed ItemChildCount. */
 const ITEM_CHILD_COUNT = "ItemChildCount";
 const PERSON_FIELDS = new Set(["Author", "Editor"]);
+
+const FIXED_SORT = {
+  name: { field: "FileLeafRef", typeAsString: "Text" },
+  modified: { field: "Modified", typeAsString: "DateTime" },
+  size: { field: "File_x0020_Size", typeAsString: "Number" },
+} as const;
 
 /** Bảng một cấp kiểu document library SharePoint. */
 export function FileList({
@@ -26,6 +32,9 @@ export function FileList({
   onOpenFolder,
   extraColumns = [],
   fixedTitles,
+  sort,
+  onSort,
+  extraColumnMenuGroups,
 }: FileListProps) {
   const styles = useFileManagerStyles();
 
@@ -33,23 +42,49 @@ export function FileList({
     <Table size="small" aria-label={messages.files} className={styles.table} noNativeElements={false}>
       <TableHeader>
         <TableRow className={styles.headerRow}>
-          <TableHeaderCell className={mergeClasses(styles.headerCell, styles.nameCell)}>
-            <span className={styles.headerTitle}>{fixedTitles?.name ?? messages.name}</span>
-          </TableHeaderCell>
-          <TableHeaderCell className={mergeClasses(styles.headerCell, styles.modifiedCell)}>
-            <span className={styles.headerTitle}>{fixedTitles?.modified ?? messages.modified}</span>
-          </TableHeaderCell>
+          <ColumnHeaderMenu
+            title={fixedTitles?.name ?? messages.name}
+            field={FIXED_SORT.name.field}
+            typeAsString={FIXED_SORT.name.typeAsString}
+            sort={sort}
+            onSort={onSort}
+            messages={messages}
+            className={mergeClasses(styles.headerCell, styles.nameCell)}
+            extraGroups={extraColumnMenuGroups}
+          />
+          <ColumnHeaderMenu
+            title={fixedTitles?.modified ?? messages.modified}
+            field={FIXED_SORT.modified.field}
+            typeAsString={FIXED_SORT.modified.typeAsString}
+            sort={sort}
+            onSort={onSort}
+            messages={messages}
+            className={mergeClasses(styles.headerCell, styles.modifiedCell)}
+            extraGroups={extraColumnMenuGroups}
+          />
           {extraColumns.map((col) => (
-            <TableHeaderCell
+            <ColumnHeaderMenu
               key={col.internalName}
+              title={col.title}
+              field={col.internalName}
+              typeAsString={col.typeAsString}
+              sort={sort}
+              onSort={onSort}
+              messages={messages}
               className={mergeClasses(styles.headerCell, styles.extraCell)}
-            >
-              <span className={styles.headerTitle}>{col.title}</span>
-            </TableHeaderCell>
+              extraGroups={extraColumnMenuGroups}
+            />
           ))}
-          <TableHeaderCell className={mergeClasses(styles.headerCell, styles.sizeCell)}>
-            <span className={styles.headerTitle}>{fixedTitles?.size ?? messages.size}</span>
-          </TableHeaderCell>
+          <ColumnHeaderMenu
+            title={fixedTitles?.size ?? messages.size}
+            field={FIXED_SORT.size.field}
+            typeAsString={FIXED_SORT.size.typeAsString}
+            sort={sort}
+            onSort={onSort}
+            messages={messages}
+            className={mergeClasses(styles.headerCell, styles.sizeCell)}
+            extraGroups={extraColumnMenuGroups}
+          />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -68,7 +103,10 @@ export function FileList({
   );
 }
 
-type FileRowProps = Omit<FileListProps, "items" | "fixedTitles"> & {
+type FileRowProps = Omit<
+  FileListProps,
+  "items" | "fixedTitles" | "sort" | "onSort" | "extraColumnMenuGroups"
+> & {
   item: SharePointItem;
 };
 

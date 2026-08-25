@@ -46,7 +46,7 @@ Luồng list một folder:
 1. `getLibrary()` (cache) → `listId` + `rootFolderServerRelativeUrl`
 2. Nếu không phải root: `GetFolderById` lấy `ServerRelativeUrl` (= FileDirRef)
 3. Cột option: `GET web/lists(guid)/defaultView/viewfields`, sau đó lấy `Title` của đúng các `InternalName` từ `/fields` theo locale; view lỗi → `GET /fields` chỉ InternalName 3 cột cố định (`FileLeafRef`, `Modified`, `File_x0020_Size`) — không lấy hết schema
-4. `GET web/lists(guid)/items?$filter=FileDirRef eq '...'` — `$select` các cột bước 3 trừ Name/Modified/Size (render từ File/Folder) và computed fields + File/Folder; `$expand=File,Folder` và thêm `Author`/`Editor` chỉ khi cột đó nằm trong `$select` (`Author/Id,Author/Title`), `$top=30`
+4. `GET web/lists(guid)/items?$filter=FileDirRef eq '...'` — `$select` các cột bước 3 trừ Name/Modified/Size (render từ File/Folder) và computed fields + File/Folder; `$expand=File,Folder` và thêm `Author`/`Editor` chỉ khi cột đó nằm trong `$select` (`Author/Id,Author/Title`), `$top=30`, `$orderby=FSObjType desc,FileLeafRef` (mặc định). Click cột: GET lại trang đầu với `$orderby=FSObjType desc,{InternalName} asc|desc` (`Author/Title` / `Editor/Title`). Không sort client khi còn `@odata.nextLink`.
 5. Trang sau: GET nguyên `@odata.nextLink` (`SharePointRestClient.getUrl`)
 6. Bỏ folder `Forms`, map `File.UniqueId` / `Folder.UniqueId`; folder: `childItemCount` = `Folder.ItemCount` (tổng con trực tiếp)
 7. Cột bị báo `does not exist` (ghost theo tenant): `FieldService.exclude` loại khỏi danh sách rồi thử lại mỗi GET — tối đa 3 lần
@@ -64,7 +64,7 @@ Giá trị cột trên từng dòng nằm ở `SharePointItem.fields`. Query ODa
 types/                      Props, Messages, MSAL
 auth/                       createMsalTokenProvider
 provider/                   AppProvider + SharePointProvider + hooks
-hooks/                      useFolderChildren, useLibraryFields, getErrorMessage
+hooks/                      useFolderChildren, useLibraryFields, useColumnSort, getErrorMessage
 fluent/                     theme, isDarkTheme
 i18n/                       messages
 utils/                      format bytes / ngày

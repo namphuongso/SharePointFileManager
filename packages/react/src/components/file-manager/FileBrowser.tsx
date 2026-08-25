@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { FIXED_LIBRARY_FIELD_NAMES, type SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
 import {
   Breadcrumb,
@@ -11,7 +11,9 @@ import {
 import { ArrowClockwiseRegular, HomeRegular } from "@fluentui/react-icons";
 import { useSharePoint } from "../../provider/context";
 import { getErrorMessage } from "../../hooks/getErrorMessage";
+import { useColumnSort } from "../../hooks/useColumnSort";
 import { useFolderChildren } from "../../hooks/useFolderChildren";
+import { useLoadMoreOnScroll } from "../../hooks/useLoadMoreOnScroll";
 import { useLibraryFields } from "../../hooks/useLibraryFields";
 import { fieldLabel } from "../../i18n/messages";
 import type { BreadcrumbCrumb, FileBrowserProps } from "../../types";
@@ -47,7 +49,8 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     { id: rootId, name: title ?? messages.files },
   ]);
   const currentFolderId = crumbs[crumbs.length - 1]?.id ?? rootId;
-  const childrenQuery = useFolderChildren(currentFolderId);
+  const { sort, onSort } = useColumnSort();
+  const childrenQuery = useFolderChildren(currentFolderId, sort);
   const fieldsQuery = useLibraryFields();
   const libraryFields = fieldsQuery.data ?? [];
   const selectableLibraryFields = useMemo(
@@ -79,6 +82,15 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     () => childrenQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [childrenQuery.data],
   );
+  const fetchNextPage = childrenQuery.fetchNextPage;
+  const loadMore = useCallback(() => {
+    void fetchNextPage();
+  }, [fetchNextPage]);
+  const { rootRef, sentinelRef } = useLoadMoreOnScroll(
+    Boolean(childrenQuery.hasNextPage),
+    childrenQuery.isFetchingNextPage,
+    loadMore,
+  );
 
   const extraColumns = useMemo(
     () =>
@@ -91,6 +103,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
         .map((f) => ({
           internalName: f.internalName,
           title: fieldLabel(messages, f.internalName, f.title),
+          typeAsString: f.typeAsString,
         })),
     [selectableLibraryFields, messages, resolvedVisible],
   );
@@ -167,7 +180,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
       ) : null}
 
       <div className={styles.listCard}>
-        <div className={styles.listPane}>
+        <div ref={rootRef} className={styles.listPane}>
           {childrenQuery.isPending ? <LibrarySkeleton /> : null}
           {!childrenQuery.isPending && items.length === 0 ? <EmptyState messages={messages} /> : null}
           {!childrenQuery.isPending && items.length > 0 ? (
@@ -178,16 +191,19 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
               onOpenFolder={openFolder}
               extraColumns={extraColumns}
               fixedTitles={fixedTitles}
+              sort={sort}
+              onSort={onSort}
             />
           ) : null}
           {childrenQuery.hasNextPage ? (
             <div className={styles.loadMore}>
+              <div ref={sentinelRef} className={styles.loadMoreSentinel} aria-hidden />
               <Button
                 appearance="subtle"
                 shape="circular"
                 className={styles.loadMoreButton}
                 disabled={childrenQuery.isFetchingNextPage}
-                onClick={() => void childrenQuery.fetchNextPage()}
+                onClick={loadMore}
               >
                 {messages.loadMore}
               </Button>

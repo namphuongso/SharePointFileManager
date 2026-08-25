@@ -19,6 +19,22 @@ export interface Messages {
   itemCount: string;
   /** Nhãn nút đổi ngôn ngữ hiển thị. */
   language: string;
+  /** aria-sort: tăng dần. */
+  sortAscending: string;
+  /** aria-sort: giảm dần. */
+  sortDescending: string;
+  /** Sort chữ / người: A → Z. */
+  sortAZ: string;
+  /** Sort chữ / người: Z → A. */
+  sortZA: string;
+  /** Sort ngày: cũ trước. */
+  sortOldest: string;
+  /** Sort ngày: mới trước. */
+  sortNewest: string;
+  /** Sort số: nhỏ trước. */
+  sortSmallest: string;
+  /** Sort số: lớn trước. */
+  sortLargest: string;
   /**
  * Nhãn cột ghi đè theo InternalName.
    * Mặc định UI dùng Title SharePoint trả theo locale — chỉ đặt khi muốn ghi đè.
