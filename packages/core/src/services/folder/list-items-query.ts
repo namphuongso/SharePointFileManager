@@ -1,3 +1,4 @@
+import { listItemExpand, listItemSelect } from "../fields/item-fields";
 import { escapeODataLiteral } from "../../utils";
 
 /** Số dòng một trang — gần RowLimit view SharePoint. */
@@ -11,17 +12,20 @@ export function listItemsPath(listId: string): string {
 
 /**
  * Một cấp: FileDirRef = ServerRelativeUrl folder.
- * `$select=*` lấy đủ cột list; File/Folder/Author/Editor phải có trong `$select` khi `$expand`.
+ * $select đúng cột đã có trên library (FieldService), không `*`.
  * @see https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/use-odata-query-operations-in-sharepoint-rest-requests
  */
-export function listItemsQuery(fileDirRef: string, top: number) {
+export function listItemsQuery(
+  fileDirRef: string,
+  top: number,
+  fieldInternalNames: readonly string[],
+) {
   const path = fileDirRef.replace(/\/+$/, "") || "/";
   return {
     $filter: `FileDirRef eq '${escapeODataLiteral(path)}'`,
     $top: top,
-    $select:
-      "*,File/UniqueId,File/Name,File/Length,File/TimeLastModified,Folder/UniqueId,Folder/Name,Folder/TimeLastModified,Author/Id,Author/Title,Editor/Id,Editor/Title",
-    $expand: "File,Folder,Author,Editor",
+    $select: listItemSelect(fieldInternalNames),
+    $expand: listItemExpand(fieldInternalNames),
     $orderby: "FSObjType desc,FileLeafRef",
   };
 }

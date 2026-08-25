@@ -1,8 +1,8 @@
 import { Text, tokens } from "@fluentui/react-components";
-import { DocumentRegular } from "@fluentui/react-icons";
+import { FolderOpenRegular } from "@fluentui/react-icons";
 import type { EmptyStateProps } from "../../types";
 
-/** Folder không có file/thư mục con. */
+/** Folder không có file/thư mục con — empty state kiểu SharePoint. */
 
 export function EmptyState({ messages }: EmptyStateProps) {
   return (
@@ -12,20 +12,18 @@ export function EmptyState({ messages }: EmptyStateProps) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 12,
-        padding: 48,
+        gap: 8,
+        padding: "72px 24px",
         textAlign: "center",
       }}
     >
-      <DocumentRegular style={{ fontSize: 64, color: tokens.colorNeutralForeground4 }} />
-      <div>
-        <Text size={500} weight="semibold" block>
-          {messages.empty}
-        </Text>
-        <Text block style={{ color: tokens.colorNeutralForeground3, marginTop: 8 }}>
-          {messages.emptyHint}
-        </Text>
-      </div>
+      <FolderOpenRegular style={{ fontSize: 48, color: tokens.colorNeutralForeground4 }} />
+      <Text size={400} weight="semibold" block>
+        {messages.empty}
+      </Text>
+      <Text size={300} block style={{ color: tokens.colorNeutralForeground3, maxWidth: 360 }}>
+        {messages.emptyHint}
+      </Text>
     </div>
   );
 }

@@ -21,6 +21,8 @@ export interface SharePointProviderProps {
 export interface SharePointContextValue {
   client: SharePointClient;
   locale: string;
+  /** Đổi locale runtime cho menu ngôn ngữ tích hợp sẵn. */
+  setLocale: (locale: string) => void;
   messages: Messages;
 }
 

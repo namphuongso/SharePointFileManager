@@ -1,6 +1,10 @@
 import type { Messages } from "../types";
 
-/** Chuỗi UI vi/en. getMessages chọn theo locale, có thể ghi đè từng key. */
+/**
+ * Chuỗi UI vi/en. getMessages chọn theo locale, có thể ghi đè từng key.
+ * Nhãn cột không hardcode ở đây: mặc định UI dùng Title SharePoint trả theo locale
+ * (config.locale, header Accept-Language); fieldLabels dành cho host muốn ghi đè từng cột.
+ */
 
 const vi: Messages = {
   files: "Tệp",
@@ -13,6 +17,10 @@ const vi: Messages = {
   refresh: "Làm mới",
   loadMore: "Tải thêm",
   unknownError: "Đã xảy ra lỗi.",
+  columns: "Cột",
+  itemCount: "{count} khoản mục",
+  language: "Ngôn ngữ",
+  fieldLabels: {},
 };
 
 const en: Messages = {
@@ -26,9 +34,22 @@ const en: Messages = {
   refresh: "Refresh",
   loadMore: "Load more",
   unknownError: "Something went wrong.",
+  columns: "Columns",
+  itemCount: "{count} items",
+  language: "Language",
+  fieldLabels: {},
 };
 
 export function getMessages(locale: string, overrides?: Partial<Messages>): Messages {
   const base = locale.toLowerCase().startsWith("en") ? en : vi;
-  return overrides ? { ...base, ...overrides } : base;
+  if (!overrides) return base;
+  return {
+    ...base,
+    ...overrides,
+    fieldLabels: { ...base.fieldLabels, ...overrides.fieldLabels },
+  };
+}
+
+export function fieldLabel(messages: Messages, internalName: string, fallback: string): string {
+  return messages.fieldLabels[internalName] ?? fallback;
 }

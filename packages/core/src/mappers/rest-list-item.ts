@@ -3,8 +3,6 @@ import type { RestFile, RestFolder, RestListItem } from "../types/rest";
 import { mapRestItem } from "../utils/map-rest-item";
 import { requireUniqueId } from "../utils/require-unique-id";
 
-const SKIP_FIELD_KEYS = new Set(["File", "Folder"]);
-
 function isFolderItem(item: RestListItem): boolean {
   const fs = item.FileSystemObjectType;
   const obj = item.FSObjType;
@@ -17,13 +15,22 @@ function toSize(length: number | string | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function listItemFields(item: RestListItem): Record<string, unknown> {
+function toCount(value: number | string | undefined): number | undefined {
+  if (value === undefined || value === "") return undefined;
+  const count = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(count) && count >= 0 ? count : undefined;
+}
+
+/** Chỉ giữ cột được FieldService chọn; Id (OData) → ID. */
+function listItemFields(
+  item: RestListItem,
+  fieldInternalNames: readonly string[],
+): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
+  const allowed = new Set(fieldInternalNames);
   for (const [key, value] of Object.entries(item)) {
-    if (SKIP_FIELD_KEYS.has(key) || key.startsWith("@odata") || key.startsWith("odata.")) {
-      continue;
-    }
-    fields[key] = value;
+    if (!allowed.has(key)) continue;
+    fields[key === "Id" ? "ID" : key] = value;
   }
   return fields;
 }
@@ -32,7 +39,10 @@ function listItemFields(item: RestListItem): Record<string, unknown> {
  * JSON list item (+ File/Folder expand) → SharePointItem.
  * Folder hệ thống Forms không đưa lên UI.
  */
-export function mapRestListItem(item: RestListItem): SharePointItem | undefined {
+export function mapRestListItem(
+  item: RestListItem,
+  fieldInternalNames: readonly string[],
+): SharePointItem | undefined {
   const folder = isFolderItem(item);
   const file = item.File as RestFile | undefined;
   const folderObj = item.Folder as RestFolder | undefined;
@@ -44,14 +54,17 @@ export function mapRestListItem(item: RestListItem): SharePointItem | undefined 
   const uniqueId = folder ? folderObj?.UniqueId : file?.UniqueId;
   const id = uniqueId ?? (typeof item.GUID === "string" ? item.GUID : undefined);
 
+  const base = mapRestItem(
+    folder ? "folder" : "file",
+    name,
+    requireUniqueId(id, folder ? "folder" : "file"),
+    folder ? folderObj?.TimeLastModified : file?.TimeLastModified,
+    folder ? undefined : toSize(file?.Length),
+  );
+
   return {
-    ...mapRestItem(
-      folder ? "folder" : "file",
-      name,
-      requireUniqueId(id, folder ? "folder" : "file"),
-      folder ? folderObj?.TimeLastModified : file?.TimeLastModified,
-      folder ? undefined : toSize(file?.Length),
-    ),
-    fields: listItemFields(item),
+    ...base,
+    ...(folder && folderObj ? { childItemCount: toCount(folderObj.ItemCount) } : {}),
+    fields: listItemFields(item, fieldInternalNames),
   };
 }

@@ -29,8 +29,11 @@ export function SharePointFileManager(props: SharePointFileManagerProps) {
     props.config ?? (app?.status === "ready" && app.appConfig ? app.createConfig(target) : undefined);
 
   if (!config) {
-    throw new Error(
-      "SharePointFileManager requires `config`, or `libraryName` inside SharePointAppProvider",
+    return (
+      <p style={{ padding: 16, color: "#a80000", fontSize: 14 }}>
+        SharePointFileManager: thiếu cấu hình. Truyền prop <code>config</code> hoặc đặt bên trong{" "}
+        <code>SharePointAppProvider</code>.
+      </p>
     );
   }
 
@@ -41,7 +44,11 @@ export function SharePointFileManager(props: SharePointFileManagerProps) {
       messages={props.messages ?? app?.messages}
       theme={props.theme}
     >
-      <FileBrowser className={props.className} title={props.title} />
+      <FileBrowser
+        className={props.className}
+        title={props.title}
+        showLanguageSwitcher={props.showLanguageSwitcher}
+      />
     </SharePointProvider>
   );
 }

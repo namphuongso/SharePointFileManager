@@ -15,8 +15,10 @@ export interface SharePointItem {
   name: string;
   type: SharePointItemType;
   size?: number;
+  /** Folder: tổng số item con trực tiếp (file + folder) từ Folder/ItemCount. */
+  childItemCount?: number;
   lastModifiedDateTime?: string;
-  /** Giá trị cột list (không $select). Key = InternalName / EntityPropertyName. */
+  /** Giá trị cột do SharePoint trả về. Key = InternalName. */
   fields?: Record<string, unknown>;
 }
 
@@ -27,21 +29,14 @@ export interface FolderChildrenPage {
 }
 
 /**
- * Cột library (SP.Field) để option ẩn/hiện.
- * `internalName` là key ổn định; `title` là nhãn UI.
+ * Cột option ẩn/hiện lấy từ SharePoint.
+ * `internalName` khớp `$select` items; `title` là nhãn SharePoint trả theo locale.
  */
 export interface SharePointField {
-  id?: string;
   title: string;
   internalName: string;
-  entityPropertyName?: string;
+  /** TypeAsString từ SharePoint — dùng để tránh select computed field. */
   typeAsString?: string;
-  fieldTypeKind?: number;
-  hidden: boolean;
-  readOnly: boolean;
-  required: boolean;
-  sortable?: boolean;
-  filterable?: boolean;
 }
 
 export interface SharePointAppConfig {
@@ -49,6 +44,9 @@ export interface SharePointAppConfig {
   siteUrl?: string;
   scopes?: string[];
   tokenProvider: TokenProvider;
+
+  /** Ngôn ngữ nhãn cột — gửi Accept-Language khi GET cột (vd. vi-VN, en-US). */
+  locale?: string;
 }
 
 export type ResolvedSharePointAppConfig = SharePointAppConfig & {

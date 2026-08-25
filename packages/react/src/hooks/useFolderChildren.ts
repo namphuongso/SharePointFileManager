@@ -4,9 +4,14 @@ import { queryKeys } from "./queryKeys";
 
 /** Một cấp con; phân trang theo @odata.nextLink. */
 export function useFolderChildren(folderId: string | undefined) {
-  const { client } = useSharePoint();
+  const { client, locale } = useSharePoint();
   return useInfiniteQuery({
-    queryKey: queryKeys.children(client.config.siteId, client.cacheScope, folderId ?? ""),
+    queryKey: queryKeys.children(
+      client.config.siteId,
+      client.cacheScope,
+      client.config.locale ?? locale,
+      folderId ?? "",
+    ),
     enabled: Boolean(folderId),
     initialPageParam: undefined as string | undefined,
     queryFn: ({ signal, pageParam }) =>

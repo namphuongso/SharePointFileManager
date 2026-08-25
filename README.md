@@ -45,6 +45,28 @@ const siteUrl = "https://contoso.sharepoint.com/sites/eOffice";
 <SharePointFileManager libraryName="eDocumentTest" className="h-full" />
 ```
 
+Toolbar có sẵn menu **VI/EN**. Khi người dùng đổi ngôn ngữ, thư viện sẽ gọi lại fields
+với header `Accept-Language` mới. Nếu host muốn tự kiểm soát, `locale` vẫn là prop động.
+
+```tsx
+const [locale, setLocale] = useState("vi-VN");
+
+<SharePointFileManager
+  libraryName="eDocumentTest"
+  locale={locale}
+  className="h-full"
+/>
+```
+
+Muốn ẩn menu tích hợp sẵn:
+
+```tsx
+<SharePointFileManager
+  libraryName="eDocumentTest"
+  showLanguageSwitcher={false}
+/>
+```
+
 Library **không login**. Host phải đã đăng nhập Microsoft.
 
 ## Entra ID

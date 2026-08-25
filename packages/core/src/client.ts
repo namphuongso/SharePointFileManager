@@ -12,7 +12,7 @@ import type {
 
 /**
  * Lớp ghép core: token + REST + cache thư viện + FolderService + FieldService.
- * UI không fetch trực tiếp — mọi GET đi qua this.rest / this.folders / this.fields.
+ * UI không fetch trực tiếp — GET SharePoint đi qua this.rest / this.folders / this.fields.
  */
 export class SharePointClient {
   readonly config: ResolvedSharePointConfig;
@@ -24,14 +24,15 @@ export class SharePointClient {
 
   constructor(config: SharePointConfig, fetchImpl?: typeof fetch) {
     this.config = resolveConfig(config);
+    this.config.locale = this.config.locale || "vi-VN";
     this.rest = new SharePointRestClient({
       siteUrl: this.config.siteUrl,
       tokenProvider: this.config.tokenProvider,
       scopes: this.config.scopes,
       fetchImpl,
     });
-    this.folders = new FolderService(this.rest, () => this.getLibrary());
-    this.fields = new FieldService(this.rest, () => this.getLibrary());
+    this.fields = new FieldService(this.rest, () => this.getLibrary(), this.config.locale);
+    this.folders = new FolderService(this.rest, () => this.getLibrary(), this.fields);
   }
 
   get tokenProvider(): TokenProvider {
@@ -42,7 +43,15 @@ export class SharePointClient {
     return this.config.libraryName ?? "default";
   }
 
-  /** Tìm document library một lần rồi dùng lại cho listChildren và list fields. */
+  /** Đổi locale runtime; fields sẽ được GET lại theo Accept-Language mới. */
+  setLocale(locale?: string): void {
+    const nextLocale = locale || "vi-VN";
+    if (this.config.locale === nextLocale) return;
+    this.config.locale = nextLocale;
+    this.fields.setLocale(nextLocale);
+  }
+
+  /** Tìm document library một lần rồi dùng lại cho listChildren. */
   async getLibrary(): Promise<LibraryContext> {
     this.libraryPromise ??= resolveLibrary(
       this.rest,

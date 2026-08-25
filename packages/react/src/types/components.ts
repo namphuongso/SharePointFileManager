@@ -4,6 +4,8 @@ import type { Messages } from "./messages";
 export interface SharePointFileManagerProps extends SharePointLibraryTarget {
   config?: SharePointConfig;
   locale?: string;
+  /** Mặc định bật menu VI/EN trên toolbar; truyền false để ẩn. */
+  showLanguageSwitcher?: boolean;
   className?: string;
   title?: string;
   messages?: Partial<Messages>;
@@ -13,6 +15,7 @@ export interface SharePointFileManagerProps extends SharePointLibraryTarget {
 export interface FileBrowserProps {
   className?: string;
   title?: string;
+  showLanguageSwitcher?: boolean;
 }
 
 export interface BreadcrumbCrumb {
@@ -25,6 +28,9 @@ export interface FileListProps {
   locale: string;
   messages: Messages;
   onOpenFolder: (item: SharePointItem) => void;
+  /** Nhãn 3 cột cố định theo SharePoint locale; thiếu thì fallback messages. */
+  fixedTitles?: { name?: string; modified?: string; size?: string };
+  extraColumns?: { internalName: string; title: string }[];
 }
 
 export interface EmptyStateProps {

@@ -8,4 +8,4 @@ export { sleep, throttleWaitMs } from "./throttle";
 export { requireUniqueId } from "./require-unique-id";
 export { parseODataCollection } from "./parse-odata-collection";
 export { resolveODataNextLink } from "./resolve-odata-next-link";
-
+export { mapRestItem } from "./map-rest-item";

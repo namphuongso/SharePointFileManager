@@ -6,6 +6,7 @@ import type {
   SharePointAppStatus,
 } from "../types";
 import { SharePointAppContext } from "./useSharePointApp";
+import { resolveInitialLocale } from "./SharePointProvider";
 
 /**
  * Cấp app: siteUrl + token. createConfig gắn libraryName cho từng trang.
@@ -16,6 +17,7 @@ export function SharePointAppProvider({
   messages,
   children,
 }: SharePointAppProviderProps) {
+  const effectiveLocale = resolveInitialLocale(config.locale, locale);
   const resolvedAppConfig = useMemo(() => resolveAppConfig(config), [config]);
   const status: SharePointAppStatus = resolvedAppConfig ? "ready" : "error";
   const error = resolvedAppConfig
@@ -27,7 +29,7 @@ export function SharePointAppProvider({
       appConfig: resolvedAppConfig,
       status,
       error,
-      locale,
+      locale: effectiveLocale,
       messages,
       createConfig: (target = {}) => {
         if (!resolvedAppConfig) {
@@ -36,7 +38,7 @@ export function SharePointAppProvider({
         return createSharePointConfig(resolvedAppConfig, target);
       },
     }),
-    [resolvedAppConfig, status, error, locale, messages],
+    [resolvedAppConfig, effectiveLocale, status, error, messages],
   );
 
   return <SharePointAppContext.Provider value={value}>{children}</SharePointAppContext.Provider>;

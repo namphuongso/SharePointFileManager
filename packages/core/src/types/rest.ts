@@ -27,6 +27,8 @@ export interface RestFile {
 export interface RestFolder {
   UniqueId?: string;
   Name?: string;
+  /** Tổng số item con trực tiếp (file + folder). */
+  ItemCount?: number | string;
   ServerRelativeUrl?: string;
   TimeLastModified?: string;
 }
@@ -38,7 +40,7 @@ export interface RestList {
   RootFolder?: { ServerRelativeUrl?: string; UniqueId?: string; Name?: string };
 }
 
-/** JSON list item (odata=nometadata). Không $select — đủ cột scalar + $expand. */
+/** JSON list item (odata=nometadata). $select bộ cột đã chọn + File/Folder/Author/Editor. */
 export interface RestListItem {
   Id?: number;
   GUID?: string;
@@ -54,22 +56,22 @@ export interface RestListItem {
 
 export interface RestODataCollection<T> {
   value?: T[];
+  "@odata.count"?: number | string;
   "@odata.nextLink"?: string;
 }
 
-/** JSON SP.Field (odata=nometadata). Không $select — REST trả đủ property scalar. */
+/** JSON SP.Field — $select InternalName,Title,TypeAsString. */
 export interface RestField {
   Id?: string;
   Title?: string;
   InternalName?: string;
-  EntityPropertyName?: string;
   TypeAsString?: string;
-  FieldTypeKind?: number;
   Hidden?: boolean;
-  ReadOnlyField?: boolean;
-  Required?: boolean;
-  Sortable?: boolean;
-  Filterable?: boolean;
+}
+
+/** JSON defaultView/viewfields (odata=nometadata) — InternalName cột của view mặc định. */
+export interface RestViewFields {
+  Items?: string[];
 }
 
 export interface RestErrorBody {
@@ -99,7 +101,7 @@ export interface ListChildrenOptions {
   signal?: AbortSignal;
 }
 
-/** Tùy chọn lấy schema cột library (FieldService.list). */
+/** Tùy chọn GET cột SharePoint (FieldService.list). */
 export interface ListFieldsOptions {
   signal?: AbortSignal;
 }

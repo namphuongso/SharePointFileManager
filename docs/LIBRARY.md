@@ -36,7 +36,7 @@ config/                     resolve-config, create-sharepoint-config
 rest/                       client GET, build-url, parse-body, throttle, odata
 services/library/           resolve theo libraryName
 services/folder/            listChildren + resolve path
-services/fields/            list schema cột (GET .../fields, không $select)
+services/fields/            defaultView/viewfields + GET /fields; fallback GET /fields
 mappers/                    list item / SP.Field → model
 errors/                     SharePointError + map HTTP/OData
 ```
@@ -45,13 +45,18 @@ Luồng list một folder:
 
 1. `getLibrary()` (cache) → `listId` + `rootFolderServerRelativeUrl`
 2. Nếu không phải root: `GetFolderById` lấy `ServerRelativeUrl` (= FileDirRef)
-3. `GET web/lists(guid)/items?$filter=FileDirRef eq '...'` — `$select=*` + property `$expand`; `$expand=File,Folder,Author,Editor`, `$top=30`
-4. Trang sau: GET nguyên `@odata.nextLink` (`SharePointRestClient.getUrl`)
-5. Bỏ folder `Forms`, map `File.UniqueId` / `Folder.UniqueId`
+3. Cột option: `GET web/lists(guid)/defaultView/viewfields`, sau đó lấy `Title` của đúng các `InternalName` từ `/fields` theo locale; view lỗi → `GET /fields` chỉ InternalName 3 cột cố định (`FileLeafRef`, `Modified`, `File_x0020_Size`) — không lấy hết schema
+4. `GET web/lists(guid)/items?$filter=FileDirRef eq '...'` — `$select` các cột bước 3 trừ Name/Modified/Size (render từ File/Folder) và computed fields + File/Folder; `$expand=File,Folder` và thêm `Author`/`Editor` chỉ khi cột đó nằm trong `$select` (`Author/Id,Author/Title`), `$top=30`
+5. Trang sau: GET nguyên `@odata.nextLink` (`SharePointRestClient.getUrl`)
+6. Bỏ folder `Forms`, map `File.UniqueId` / `Folder.UniqueId`; folder: `childItemCount` = `Folder.ItemCount` (tổng con trực tiếp)
+7. Cột bị báo `does not exist` (ghost theo tenant): `FieldService.exclude` loại khỏi danh sách rồi thử lại mỗi GET — tối đa 3 lần
 
-Schema cột (option ẩn/hiện): `GET web/lists(guid'{listId}')/fields` — không `$select`.
+Ẩn/hiện cột chỉ trên UI (`ColumnPicker`): mặc định hiện Tên / Sửa đổi / Kích thước + Người sửa đổi (`Editor`) giống All Documents; tick thêm cột không gọi REST. Cột `ItemChildCount` trên view (nếu bật) hiện `childItemCount`; không dùng `FolderChildCount`. Không `storagemetrics` / `getMetrics`.
 
-Giá trị cột trên từng dòng nằm ở `SharePointItem.fields`. Ẩn/hiện cột chỉ lọc UI. Query OData encode `%20` (không `+`).
+Nhãn cột = Title SharePoint trả theo locale (`Accept-Language`); `messages.fieldLabels` chỉ để host ghi đè. Đổi locale runtime qua `SharePointClient.setLocale`; React Query cache tách theo locale.
+Toolbar có menu VI/EN mặc định (`showLanguageSwitcher={false}` để ẩn).
+
+Giá trị cột trên từng dòng nằm ở `SharePointItem.fields`. Query OData encode `%20` (không `+`).
 
 ## React — thứ tự đọc
 
@@ -71,5 +76,5 @@ components/file-manager/    UI duyệt thư viện (browser, bảng, empty, bann
 - Interface/type nằm ở `types/` — không khai báo chung file logic.
 - Việc liên quan nằm **cùng thư mục**; mỗi file một việc.
 - REST chỉ đọc: thêm ghi/xóa thì tách service mới, không nhồi vào `services/library`.
-- `$select` chỉ khi lấy 1–vài property (vd. `ServerRelativeUrl`). List items / fields: **không** `$select` để đủ cột. `$expand` cho `File`, `Folder`, `Author`, `Editor`. Không `$skip` trên items — dùng `@odata.nextLink`.
+- `$select` chỉ property cần: `GetFolderById` → `ServerRelativeUrl`; list items → `listItemSelect(internalNames)` (không `*`); `/fields` → `Id,Title,InternalName`. `$expand` cho `File`, `Folder`, `Author`, `Editor`. Không `$skip` trên items — dùng `@odata.nextLink`.
 - Comment theo **khối / hàm** (ý định + vì sao), tiếng Việt, không comment từng dòng gán biến.

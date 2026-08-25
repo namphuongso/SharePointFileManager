@@ -61,20 +61,25 @@ export function App() {
 
   return (
     <SharePointAppProvider
-      locale="vi-VN"
       config={{
         siteUrl,
         scopes,
         tokenProvider,
       }}
     >
-      <main style={{ minHeight: "100vh", background: "#f5f5f5", display: "flex", flexDirection: "column" }}>
-        <div style={{ marginBottom: 12, padding: 12 }}>
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#ffffff",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ padding: "8px 16px", fontSize: 12, color: "#605e5c" }}>
           Signed in as {account.username}{" "}
           <button type="button" onClick={() => instance.logoutRedirect()}>
             Sign out
           </button>
-          <span style={{ marginLeft: 12, color: "#666" }}>library: {libraryName}</span>
         </div>
         <div style={{ flex: 1, minHeight: 0 }}>
           <SharePointFileManager libraryName={libraryName} className="h-full" />

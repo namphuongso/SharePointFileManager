@@ -23,5 +23,15 @@ export function formatRelativeDate(value: string | undefined, locale: string): s
   if (absMs < hour) return rtf.format(Math.round(diffMs / minute), "minute");
   if (absMs < day) return rtf.format(Math.round(diffMs / hour), "hour");
   if (absMs < 7 * day) return rtf.format(Math.round(diffMs / day), "day");
-  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+/** Số con folder trên cột kích thước (giống File Size SharePoint). */
+export function formatItemCount(count: number | undefined, template: string): string {
+  if (count === undefined) return "—";
+  return template.replace("{count}", String(count));
 }

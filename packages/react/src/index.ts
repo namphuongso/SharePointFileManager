@@ -17,6 +17,7 @@ export {
   createSharePointConfig,
   resolveAppConfig,
   isSharePointError,
+  FIXED_LIBRARY_FIELD_NAMES,
 } from "@namphuongso/sharepoint-file-manager-core";
 
 export type {
