@@ -11,6 +11,10 @@ export interface Messages {
   unknownError: string;
   /** Nhãn nút mở column picker — ẩn/hiện cột. */
   columns: string;
+  /** Cột Name/Modified luôn hiện trên bảng. */
+  alwaysVisible: string;
+  /** Cột tùy chọn trong picker. */
+  moreColumns: string;
   /** Folder trên cột kích thước: "2 khoản mục". */
   itemCount: string;
   /** Nhãn nút đổi ngôn ngữ hiển thị. */

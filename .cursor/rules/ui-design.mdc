@@ -1,0 +1,40 @@
+---
+description: Phong cách UI File Manager — thanh pill, icon nét mảnh, nền trung tính
+globs: packages/react/**/*.{ts,tsx},examples/react-vite/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# UI — thanh công cụ pill
+
+Nguồn: cụm Globe / Cột / Refresh. Đường dẫn thư mục dùng **Breadcrumb Fluent** (chữ + Home, không pill viền đen).
+
+## Hình khối
+
+- Nhóm icon: **một viên thuốc** (`borderRadiusCircular`), nền `colorNeutralBackground3`, không viền, không bóng. Padding trong rộng hơn khoảng cách giữa nút.
+- Nút trong pill: `appearance="subtle"` + `shape="circular"`, 32×32, `colorNeutralForeground2`.
+- Chip người trong bảng: pill nền xám, padding dọc ~6px, chữ base300; hàng ~48px.
+- Breadcrumb: `Breadcrumb` / `BreadcrumbButton` size large, icon Regular ở gốc.
+
+## Icon
+
+- Toolbar và action: chỉ **Regular**, không `*Filled`. `fontSize={20}` trong nút 32px.
+- Icon loại file/folder trong bảng giữ glyph màu, không đổi outline.
+
+## Bảng và canvas
+
+- Canvas `colorNeutralBackground1`. Card bảng: viền mảnh `strokeWidthThin` + `colorNeutralStroke3`, bo `borderRadiusLarge`, không bóng.
+- Empty/error: icon Regular. Nút thử lại / tải thêm: pill hoặc circular subtle.
+
+```tsx
+// ❌
+<Button appearance="outline" shape="circular" className={styles.crumbButton}>Tệp</Button>
+<Button appearance="primary" icon={<GlobeFilled />} />
+
+// ✅
+<BreadcrumbButton icon={<HomeRegular />}>{name}</BreadcrumbButton>
+<div className={styles.commandActions}>
+  <Button appearance="subtle" shape="circular" icon={<GlobeRegular fontSize={20} />} />
+</div>
+```
+
+Style gom trong `useFileManagerStyles.ts`. Không `fetch` SharePoint từ UI.

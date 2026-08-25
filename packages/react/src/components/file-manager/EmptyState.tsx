@@ -1,27 +1,19 @@
-import { Text, tokens } from "@fluentui/react-components";
+import { Text } from "@fluentui/react-components";
 import { FolderOpenRegular } from "@fluentui/react-icons";
 import type { EmptyStateProps } from "../../types";
+import { useFileManagerStyles } from "./useFileManagerStyles";
 
-/** Folder không có file/thư mục con — empty state kiểu SharePoint. */
+/** Folder trống: icon Regular nét mảnh, không fill. */
 
 export function EmptyState({ messages }: EmptyStateProps) {
+  const styles = useFileManagerStyles();
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        padding: "72px 24px",
-        textAlign: "center",
-      }}
-    >
-      <FolderOpenRegular style={{ fontSize: 48, color: tokens.colorNeutralForeground4 }} />
+    <div className={styles.emptyState}>
+      <FolderOpenRegular className={styles.emptyIcon} />
       <Text size={400} weight="semibold" block>
         {messages.empty}
       </Text>
-      <Text size={300} block style={{ color: tokens.colorNeutralForeground3, maxWidth: 360 }}>
+      <Text size={300} block className={styles.emptyHint}>
         {messages.emptyHint}
       </Text>
     </div>

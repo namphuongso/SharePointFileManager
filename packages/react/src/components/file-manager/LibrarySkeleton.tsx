@@ -14,7 +14,7 @@ export function LibrarySkeleton() {
               gridTemplateColumns: "20px minmax(0, 2fr) 120px 88px 160px",
               gap: 12,
               alignItems: "center",
-              height: 42,
+              height: 48,
               borderBottom: "1px solid var(--colorNeutralStroke2)",
             }}
           >

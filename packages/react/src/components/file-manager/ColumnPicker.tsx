@@ -9,10 +9,9 @@ import {
   PopoverSurface,
   PopoverTrigger,
   Text,
-  tokens,
 } from "@fluentui/react-components";
-import { ColumnTripleRegular } from "@fluentui/react-icons";
-import { useId } from "react";
+import { ColumnTripleRegular, LockClosedRegular } from "@fluentui/react-icons";
+import { useId, useMemo } from "react";
 import { fieldLabel } from "../../i18n/messages";
 import type { Messages } from "../../types";
 import { useFileManagerStyles } from "./useFileManagerStyles";
@@ -27,7 +26,7 @@ export interface ColumnPickerProps {
 }
 
 /**
- * Chọn ẩn/hiện cột từ view mặc định. Name / Modified / File Size luôn bật.
+ * Chọn ẩn/hiện cột từ view mặc định. Name / Modified / File Size luôn bật — không dùng checkbox disabled.
  */
 export function ColumnPicker({
   fields = [],
@@ -38,6 +37,15 @@ export function ColumnPicker({
 }: ColumnPickerProps) {
   const titleId = useId();
   const styles = useFileManagerStyles();
+  const { locked, optional } = useMemo(() => {
+    const lockedFields: SharePointField[] = [];
+    const optionalFields: SharePointField[] = [];
+    for (const field of fields) {
+      if (FIXED_LIBRARY_FIELD_NAMES.has(field.internalName)) lockedFields.push(field);
+      else optionalFields.push(field);
+    }
+    return { locked: lockedFields, optional: optionalFields };
+  }, [fields]);
 
   function toggle(internalName: string) {
     if (FIXED_LIBRARY_FIELD_NAMES.has(internalName)) return;
@@ -48,7 +56,7 @@ export function ColumnPicker({
   }
 
   return (
-    <Popover positioning="below-end">
+    <Popover positioning={{ position: "below-end", offset: { mainAxis: 8 } }}>
       <PopoverTrigger disableButtonEnhancement>
         <Button
           appearance="subtle"
@@ -56,37 +64,39 @@ export function ColumnPicker({
           className={styles.commandIconButton}
           icon={<ColumnTripleRegular fontSize={20} />}
           aria-label={label}
-          title={label}
         />
       </PopoverTrigger>
       <PopoverSurface aria-labelledby={titleId} className={styles.pickerSurface}>
-        <Text
-          id={titleId}
-          weight="semibold"
-          size={200}
-          style={{
-            display: "block",
-            padding: "0 16px 8px",
-            color: tokens.colorNeutralForeground3,
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
+        <Text id={titleId} className={styles.pickerHeader}>
           {label}
         </Text>
-        {fields.map((field) => {
-          const fixed = FIXED_LIBRARY_FIELD_NAMES.has(field.internalName);
-          return (
-            <div key={field.internalName} style={{ padding: "2px 12px" }}>
-              <Checkbox
-                label={fieldLabel(messages, field.internalName, field.title)}
-                checked={fixed || visible.has(field.internalName)}
-                disabled={fixed}
-                onChange={() => toggle(field.internalName)}
-              />
-            </div>
-          );
-        })}
+        <div className={styles.pickerList}>
+          {locked.length > 0 ? (
+            <>
+              <Text className={styles.pickerSectionLabel}>{messages.alwaysVisible}</Text>
+              {locked.map((field) => (
+                <div key={field.internalName} className={styles.pickerLockedRow}>
+                  <LockClosedRegular fontSize={16} className={styles.pickerLockedIcon} />
+                  <span>{fieldLabel(messages, field.internalName, field.title)}</span>
+                </div>
+              ))}
+            </>
+          ) : null}
+          {optional.length > 0 ? (
+            <>
+              <Text className={styles.pickerSectionLabel}>{messages.moreColumns}</Text>
+              {optional.map((field) => (
+                <Checkbox
+                  key={field.internalName}
+                  className={styles.pickerCheckbox}
+                  label={fieldLabel(messages, field.internalName, field.title)}
+                  checked={visible.has(field.internalName)}
+                  onChange={() => toggle(field.internalName)}
+                />
+              ))}
+            </>
+          ) : null}
+        </div>
       </PopoverSurface>
     </Popover>
   );

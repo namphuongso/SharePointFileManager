@@ -183,7 +183,9 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
           {childrenQuery.hasNextPage ? (
             <div className={styles.loadMore}>
               <Button
-                appearance="transparent"
+                appearance="subtle"
+                shape="circular"
+                className={styles.loadMoreButton}
                 disabled={childrenQuery.isFetchingNextPage}
                 onClick={() => void childrenQuery.fetchNextPage()}
               >
