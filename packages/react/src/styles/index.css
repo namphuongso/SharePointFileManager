@@ -1,1 +1,22 @@
 @tailwind utilities;
+
+.fui-PopoverSurface .fui-Checkbox,
+.fui-PopoverSurface .fui-Checkbox__label {
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+.fui-PopoverSurface .fui-Checkbox {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.fui-PopoverSurface .fui-Checkbox__indicator {
+  align-self: center;
+}
+
+.fui-PopoverSurface .fui-Checkbox:hover {
+  background-color: var(--colorNeutralBackground1Hover);
+}

@@ -56,7 +56,7 @@ export function ColumnPicker({
   }
 
   return (
-    <Popover positioning={{ position: "below-end", offset: { mainAxis: 8 } }}>
+    <Popover positioning={{ position: "below", align: "end", offset: { mainAxis: 8 } }}>
       <PopoverTrigger disableButtonEnhancement>
         <Button
           appearance="subtle"
@@ -89,7 +89,11 @@ export function ColumnPicker({
                 <Checkbox
                   key={field.internalName}
                   className={styles.pickerCheckbox}
-                  label={fieldLabel(messages, field.internalName, field.title)}
+                  label={{
+                    children: fieldLabel(messages, field.internalName, field.title),
+                    className: styles.pickerCheckboxLabel,
+                  }}
+                  indicator={{ className: styles.pickerCheckboxIndicator }}
                   checked={visible.has(field.internalName)}
                   onChange={() => toggle(field.internalName)}
                 />

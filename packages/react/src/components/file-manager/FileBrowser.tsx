@@ -15,6 +15,7 @@ import { useColumnSort } from "../../hooks/useColumnSort";
 import { useFolderChildren } from "../../hooks/useFolderChildren";
 import { useLoadMoreOnScroll } from "../../hooks/useLoadMoreOnScroll";
 import { useLibraryFields } from "../../hooks/useLibraryFields";
+import { useVisibleExtraColumns } from "../../hooks/useVisibleExtraColumns";
 import { fieldLabel } from "../../i18n/messages";
 import type { BreadcrumbCrumb, FileBrowserProps } from "../../types";
 import { ColumnPicker } from "./ColumnPicker";
@@ -34,9 +35,6 @@ const HIDE_FROM_PICKER = new Set([
   "FileSize",
 ]);
 
-/** Cột extra mặc định giống All Documents SharePoint: Người sửa đổi. */
-const DEFAULT_EXTRA_VISIBLE = ["Editor"];
-
 /**
  * Duyệt một thư viện: command bar + list children (phân trang nextLink).
  * Không tạo client — phải nằm trong SharePointProvider.
@@ -49,7 +47,8 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     { id: rootId, name: title ?? messages.files },
   ]);
   const currentFolderId = crumbs[crumbs.length - 1]?.id ?? rootId;
-  const { sort, onSort } = useColumnSort();
+  const columnScope = `${client.config.siteId}:${client.cacheScope}`;
+  const { sort, onSort } = useColumnSort(columnScope);
   const childrenQuery = useFolderChildren(currentFolderId, sort);
   const fieldsQuery = useLibraryFields();
   const libraryFields = fieldsQuery.data ?? [];
@@ -64,8 +63,6 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     [libraryFields],
   );
 
-  /** Extra: mặc định Editor; tick Cột không gọi REST. */
-  const [visibleExtra, setVisibleExtra] = useState<Set<string> | undefined>(undefined);
   const extraNames = useMemo(
     () =>
       selectableLibraryFields
@@ -73,10 +70,10 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
         .map((f) => f.internalName),
     [selectableLibraryFields],
   );
-  const resolvedVisible = useMemo(() => {
-    if (visibleExtra) return visibleExtra;
-    return new Set(DEFAULT_EXTRA_VISIBLE.filter((name) => extraNames.includes(name)));
-  }, [visibleExtra, extraNames]);
+  const { visible: resolvedVisible, setVisible: setVisibleExtra } = useVisibleExtraColumns(
+    columnScope,
+    extraNames,
+  );
 
   const items = useMemo(
     () => childrenQuery.data?.pages.flatMap((page) => page.items) ?? [],
