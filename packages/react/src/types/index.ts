@@ -4,6 +4,8 @@ export type {
   FileBrowserProps,
   BreadcrumbCrumb,
   FileListProps,
+  FileListColumn,
+  FileListColumnKind,
   ColumnMenuItem,
   ColumnMenuGroup,
   ColumnHeaderMenuProps,

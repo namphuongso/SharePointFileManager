@@ -35,6 +35,8 @@ export interface Messages {
   sortSmallest: string;
   /** Sort số: lớn trước. */
   sortLargest: string;
+  /** aria-label tay cầm kéo rộng cột. */
+  resizeColumn: string;
   /**
  * Nhãn cột ghi đè theo InternalName.
    * Mặc định UI dùng Title SharePoint trả theo locale — chỉ đặt khi muốn ghi đè.

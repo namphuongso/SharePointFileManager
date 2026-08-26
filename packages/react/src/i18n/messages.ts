@@ -30,6 +30,7 @@ const vi: Messages = {
   sortNewest: "Mới nhất trước",
   sortSmallest: "Nhỏ đến lớn",
   sortLargest: "Lớn đến nhỏ",
+  resizeColumn: "Điều chỉnh độ rộng cột",
   fieldLabels: {},
 };
 
@@ -57,6 +58,7 @@ const en: Messages = {
   sortNewest: "Newer to older",
   sortSmallest: "Smaller to larger",
   sortLargest: "Larger to smaller",
+  resizeColumn: "Resize column",
   fieldLabels: {},
 };
 

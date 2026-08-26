@@ -8,7 +8,8 @@ import {
   TableRow,
   mergeClasses,
 } from "@fluentui/react-components";
-import type { FileListProps } from "../../types";
+import type { FileListColumn, FileListProps } from "../../types";
+import { defaultColumnWidth, minColumnWidth } from "../../utils/columnLayout";
 import { formatBytes, formatItemCount, formatRelativeDate } from "../../utils/format";
 import { ColumnHeaderMenu } from "./ColumnHeaderMenu";
 import { FileTypeIcon } from "./FileTypeIcon";
@@ -18,11 +19,12 @@ import { useFileManagerStyles } from "./useFileManagerStyles";
 const ITEM_CHILD_COUNT = "ItemChildCount";
 const PERSON_FIELDS = new Set(["Author", "Editor"]);
 
-const FIXED_SORT = {
-  name: { field: "FileLeafRef", typeAsString: "Text" },
-  modified: { field: "Modified", typeAsString: "DateTime" },
-  size: { field: "File_x0020_Size", typeAsString: "Number" },
-} as const;
+function cellClass(styles: ReturnType<typeof useFileManagerStyles>, kind: FileListColumn["kind"]): string {
+  if (kind === "name") return styles.nameCell;
+  if (kind === "modified") return styles.modifiedCell;
+  if (kind === "size") return styles.sizeCell;
+  return styles.extraCell;
+}
 
 /** Bảng một cấp kiểu document library SharePoint. */
 export function FileList({
@@ -30,61 +32,63 @@ export function FileList({
   locale,
   messages,
   onOpenFolder,
-  extraColumns = [],
-  fixedTitles,
+  columns,
+  columnWidths,
+  onColumnResize,
+  onColumnResizeEnd,
+  onColumnReorder,
   sort,
   onSort,
   extraColumnMenuGroups,
 }: FileListProps) {
   const styles = useFileManagerStyles();
+  const tableWidth = columns.reduce(
+    (sum, col) => sum + (columnWidths[col.internalName] ?? defaultColumnWidth(col.internalName)),
+    0,
+  );
 
   return (
-    <Table size="small" aria-label={messages.files} className={styles.table} noNativeElements={false}>
+    <Table
+      size="small"
+      aria-label={messages.files}
+      className={styles.table}
+      style={{ minWidth: tableWidth }}
+      noNativeElements={false}
+    >
+      <colgroup>
+        {columns.map((col) => {
+          const width = columnWidths[col.internalName] ?? defaultColumnWidth(col.internalName);
+          return (
+            <col
+              key={col.internalName}
+              style={{ width, minWidth: minColumnWidth(col.internalName) }}
+            />
+          );
+        })}
+      </colgroup>
       <TableHeader>
         <TableRow className={styles.headerRow}>
-          <ColumnHeaderMenu
-            title={fixedTitles?.name ?? messages.name}
-            field={FIXED_SORT.name.field}
-            typeAsString={FIXED_SORT.name.typeAsString}
-            sort={sort}
-            onSort={onSort}
-            messages={messages}
-            className={mergeClasses(styles.headerCell, styles.nameCell)}
-            extraGroups={extraColumnMenuGroups}
-          />
-          <ColumnHeaderMenu
-            title={fixedTitles?.modified ?? messages.modified}
-            field={FIXED_SORT.modified.field}
-            typeAsString={FIXED_SORT.modified.typeAsString}
-            sort={sort}
-            onSort={onSort}
-            messages={messages}
-            className={mergeClasses(styles.headerCell, styles.modifiedCell)}
-            extraGroups={extraColumnMenuGroups}
-          />
-          {extraColumns.map((col) => (
-            <ColumnHeaderMenu
-              key={col.internalName}
-              title={col.title}
-              field={col.internalName}
-              typeAsString={col.typeAsString}
-              sort={sort}
-              onSort={onSort}
-              messages={messages}
-              className={mergeClasses(styles.headerCell, styles.extraCell)}
-              extraGroups={extraColumnMenuGroups}
-            />
-          ))}
-          <ColumnHeaderMenu
-            title={fixedTitles?.size ?? messages.size}
-            field={FIXED_SORT.size.field}
-            typeAsString={FIXED_SORT.size.typeAsString}
-            sort={sort}
-            onSort={onSort}
-            messages={messages}
-            className={mergeClasses(styles.headerCell, styles.sizeCell)}
-            extraGroups={extraColumnMenuGroups}
-          />
+          {columns.map((col) => {
+            const width = columnWidths[col.internalName] ?? defaultColumnWidth(col.internalName);
+            return (
+              <ColumnHeaderMenu
+                key={col.internalName}
+                title={col.title}
+                field={col.internalName}
+                typeAsString={col.typeAsString}
+                sort={sort}
+                onSort={onSort}
+                messages={messages}
+                className={mergeClasses(styles.headerCell, cellClass(styles, col.kind))}
+                extraGroups={extraColumnMenuGroups}
+                width={width}
+                minWidth={minColumnWidth(col.internalName)}
+                onResize={(next) => onColumnResize(col.internalName, next)}
+                onResizeEnd={(next) => onColumnResizeEnd(col.internalName, next)}
+                onReorder={onColumnReorder}
+              />
+            );
+          })}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -95,7 +99,7 @@ export function FileList({
             locale={locale}
             messages={messages}
             onOpenFolder={onOpenFolder}
-            extraColumns={extraColumns}
+            columns={columns}
           />
         ))}
       </TableBody>
@@ -103,14 +107,15 @@ export function FileList({
   );
 }
 
-type FileRowProps = Omit<
-  FileListProps,
-  "items" | "fixedTitles" | "sort" | "onSort" | "extraColumnMenuGroups"
-> & {
+type FileRowProps = {
   item: SharePointItem;
+  locale: string;
+  messages: FileListProps["messages"];
+  onOpenFolder: FileListProps["onOpenFolder"];
+  columns: FileListColumn[];
 };
 
-function FileRow({ item, locale, messages, onOpenFolder, extraColumns = [] }: FileRowProps) {
+function FileRow({ item, locale, messages, onOpenFolder, columns }: FileRowProps) {
   const styles = useFileManagerStyles();
   const folder = item.type === "folder";
 
@@ -119,29 +124,44 @@ function FileRow({ item, locale, messages, onOpenFolder, extraColumns = [] }: Fi
       className={mergeClasses(styles.row, folder && styles.rowFolder)}
       onClick={() => folder && onOpenFolder(item)}
     >
-      <TableCell className={mergeClasses(styles.cell, styles.nameCell)}>
-        <div className={styles.nameInner}>
-          <FileTypeIcon item={item} size="sm" />
-          <span className={mergeClasses(styles.nameText, folder && styles.nameFolder)}>
-            {item.name}
-          </span>
-        </div>
-      </TableCell>
-      <TableCell className={mergeClasses(styles.cell, styles.modifiedCell)}>
-        {formatRelativeDate(item.lastModifiedDateTime, locale)}
-      </TableCell>
-      {extraColumns.map((col) => (
-        <TableCell key={col.internalName} className={mergeClasses(styles.cell, styles.extraCell)}>
-          {renderExtraCell(item, col.internalName, locale, styles.personPill)}
+      {columns.map((col) => (
+        <TableCell
+          key={col.internalName}
+          className={mergeClasses(styles.cell, cellClass(styles, col.kind))}
+          style={{ minWidth: minColumnWidth(col.internalName) }}
+        >
+          {renderColumnCell(item, col, locale, messages, styles)}
         </TableCell>
       ))}
-      <TableCell className={mergeClasses(styles.cell, styles.sizeCell)}>
-        {folder
-          ? formatItemCount(item.childItemCount, messages.itemCount)
-          : formatBytes(item.size)}
-      </TableCell>
     </TableRow>
   );
+}
+
+function renderColumnCell(
+  item: SharePointItem,
+  column: FileListColumn,
+  locale: string,
+  messages: FileListProps["messages"],
+  styles: ReturnType<typeof useFileManagerStyles>,
+): ReactNode {
+  if (column.kind === "name") {
+    const folder = item.type === "folder";
+    return (
+      <div className={styles.nameInner}>
+        <FileTypeIcon item={item} size="sm" />
+        <span className={mergeClasses(styles.nameText, folder && styles.nameFolder)}>{item.name}</span>
+      </div>
+    );
+  }
+  if (column.kind === "modified") {
+    return formatRelativeDate(item.lastModifiedDateTime, locale);
+  }
+  if (column.kind === "size") {
+    return item.type === "folder"
+      ? formatItemCount(item.childItemCount, messages.itemCount)
+      : formatBytes(item.size);
+  }
+  return renderExtraCell(item, column.internalName, locale, styles.personPill);
 }
 
 function renderExtraCell(
