@@ -171,13 +171,13 @@ function renderExtraCell(
   personClassName: string,
 ): ReactNode {
   if (internalName === ITEM_CHILD_COUNT) {
-    if (item.type !== "folder" || item.childItemCount === undefined) return "—";
+    if (item.type !== "folder" || item.childItemCount === undefined) return "";
     return String(item.childItemCount);
   }
   const value = item.fields?.[internalName];
   if (PERSON_FIELDS.has(internalName) || isPersonValue(value)) {
     const name = personTitle(value);
-    if (!name) return "—";
+    if (!name) return "";
     return <span className={personClassName}>{name}</span>;
   }
   return formatFieldValue(value, internalName, locale);
@@ -201,14 +201,14 @@ function formatFieldValue(value: unknown, internalName: string, locale: string):
     const raw = value == null ? undefined : String(value);
     return formatDate(raw, locale);
   }
-  if (value === null || value === undefined || value === "") return "—";
+  if (value === null || value === undefined || value === "") return "";
   if (internalName === "File_x0020_Size") {
     const size = typeof value === "number" ? value : Number(value);
-    return Number.isFinite(size) ? formatBytes(size, locale) : "—";
+    return Number.isFinite(size) ? formatBytes(size, locale) : "";
   }
   if (typeof value === "object" && value !== null && "Title" in value) {
-    return String((value as { Title?: unknown }).Title ?? "—");
+    return String((value as { Title?: unknown }).Title ?? "");
   }
-  if (typeof value === "boolean") return value ? "✓" : "—";
+  if (typeof value === "boolean") return value ? "✓" : "";
   return String(value);
 }

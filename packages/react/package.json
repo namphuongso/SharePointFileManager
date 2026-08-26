@@ -47,5 +47,7 @@
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@fluentui/react-icons-file-type": "^0.0.2"
+  }
 }

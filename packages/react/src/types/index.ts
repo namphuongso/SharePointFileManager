@@ -11,12 +11,8 @@ export type {
   ColumnHeaderMenuProps,
   EmptyStateProps,
   ErrorBannerProps,
-  FileKind,
   FileTypeIconSize,
   FileTypeIconProps,
-  FolderIconProps,
-  DocumentIconProps,
-  FileIconStyle,
 } from "./components";
 export type {
   SharePointProviderProps,

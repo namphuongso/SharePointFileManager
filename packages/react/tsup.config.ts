@@ -15,6 +15,7 @@ export default defineConfig({
     "@azure/msal-browser",
     "@fluentui/react-components",
     "@fluentui/react-icons",
+    "@fluentui/react-icons-file-type",
     "@namphuongso/sharepoint-file-manager-core",
   ],
 });

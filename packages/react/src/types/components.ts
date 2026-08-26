@@ -95,37 +95,9 @@ export interface ErrorBannerProps {
   retryLabel?: string;
 }
 
-export type FileKind =
-  | "folder"
-  | "word"
-  | "excel"
-  | "powerpoint"
-  | "pdf"
-  | "image"
-  | "video"
-  | "archive"
-  | "generic";
-
 export type FileTypeIconSize = "sm" | "md" | "lg";
 
 export interface FileTypeIconProps {
   item: SharePointItem;
   size?: FileTypeIconSize;
-}
-
-export interface FolderIconProps {
-  size: number;
-}
-
-export interface DocumentIconProps {
-  color: string;
-  accent: string;
-  glyph: string;
-  size: number;
-}
-
-export interface FileIconStyle {
-  color: string;
-  accent: string;
-  glyph: string;
 }
