@@ -72,11 +72,11 @@ export function useColumnLayout(scope: string, columnIds: readonly string[]) {
   }, [columnIds]);
 
   const onResizeEnd = useCallback(
-    (field: string, width: number) => {
+    (widths: Record<string, number>) => {
       setLayout((current) => {
         const next: ColumnLayout = {
           order: persistColumnOrder(current?.order, mergeColumnOrder(current?.order, columnIds)),
-          widths: { ...(current?.widths ?? {}), [field]: width },
+          widths: { ...(current?.widths ?? {}), ...widths },
         };
         writeColumnLayout(scope, next);
         return next;

@@ -58,7 +58,7 @@ export const useFileManagerStyles = makeStyles({
     minHeight: "0",
     overflow: "auto",
   },
-  /** Đo bề rộng khả dụng; bảng bên trong có thể rộng hơn → listPane cuộn ngang. */
+  /** Đo bề rộng khả dụng; bảng full ngang khi hẹp hơn viewport, rộng hơn → listPane cuộn ngang. */
   tableViewport: {
     width: "100%",
     minWidth: "0",

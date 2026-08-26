@@ -46,7 +46,7 @@ export interface FileListProps {
   columns: FileListColumn[];
   columnWidths: Record<string, number>;
   onColumnResize: (field: string, width: number) => void;
-  onColumnResizeEnd: (field: string, width: number) => void;
+  onColumnResizeEnd: (widths: Record<string, number>) => void;
   onColumnReorder: (fromField: string, toField: string, place: "before" | "after") => void;
   sort?: ListChildrenSort;
   onSort?: (field: string, direction: ListSortDirection, typeAsString?: string) => void;

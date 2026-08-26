@@ -45,13 +45,13 @@ export function FileList({
   const styles = useFileManagerStyles();
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
+  const [resizingField, setResizingField] = useState<string>();
 
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? 0;
-      setViewportWidth(width);
+      setViewportWidth(entries[0]?.contentRect.width ?? 0);
     });
     ro.observe(el);
     setViewportWidth(el.clientWidth);
@@ -60,8 +60,8 @@ export function FileList({
 
   const columnIds = useMemo(() => columns.map((col) => col.internalName), [columns]);
   const displayWidths = useMemo(
-    () => fitColumnWidths(columnWidths, columnIds, viewportWidth),
-    [columnWidths, columnIds, viewportWidth],
+    () => fitColumnWidths(columnWidths, columnIds, viewportWidth, resizingField),
+    [columnWidths, columnIds, viewportWidth, resizingField],
   );
   const tableWidth = columnIds.reduce(
     (sum, id) => sum + (displayWidths[id] ?? defaultColumnWidth(id)),
@@ -105,8 +105,21 @@ export function FileList({
                   extraGroups={extraColumnMenuGroups}
                   width={width}
                   minWidth={minColumnWidth(col.internalName)}
-                  onResize={(next) => onColumnResize(col.internalName, next)}
-                  onResizeEnd={(next) => onColumnResizeEnd(col.internalName, next)}
+                  onResize={(next) => {
+                    setResizingField(col.internalName);
+                    onColumnResize(col.internalName, next);
+                  }}
+                  onResizeEnd={(next) => {
+                    onColumnResizeEnd(
+                      fitColumnWidths(
+                        { ...columnWidths, [col.internalName]: next },
+                        columnIds,
+                        viewportWidth,
+                        col.internalName,
+                      ),
+                    );
+                    setResizingField(undefined);
+                  }}
                   onReorder={onColumnReorder}
                 />
               );

@@ -16,31 +16,46 @@ export function defaultColumnWidth(internalName: string): number {
 }
 
 export function minColumnWidth(internalName: string): number {
-  if (internalName === NAME_FIELD) return 160;
-  return 80;
+  if (internalName === NAME_FIELD) return 120;
+  return 72;
 }
 
 /**
- * Viewport rộng hơn tổng cột → cộng phần dư vào Name (full width).
- * Viewport hẹp hơn → giữ width gốc (caller cuộn ngang, không ép cột).
+ * Viewport rộng hơn tổng cột → scale các cột cho đủ hàng ngang.
+ * `lockedId` (đang kéo) giữ nguyên width; phần dư chia cho cột còn lại.
+ * Viewport hẹp hơn → giữ width gốc (caller cuộn ngang).
  */
 export function fitColumnWidths(
   base: Readonly<Record<string, number>>,
   order: readonly string[],
   containerWidth: number,
+  lockedId?: string,
 ): Record<string, number> {
   const widths: Record<string, number> = {};
   let sum = 0;
   for (const id of order) {
-    const w = base[id] ?? defaultColumnWidth(id);
+    const w = Math.max(minColumnWidth(id), base[id] ?? defaultColumnWidth(id));
     widths[id] = w;
     sum += w;
   }
   if (containerWidth <= 0 || sum <= 0 || sum >= containerWidth) return widths;
 
-  const flexId = order.includes(NAME_FIELD) ? NAME_FIELD : order[0];
-  if (!flexId) return widths;
-  widths[flexId] = widths[flexId]! + (containerWidth - sum);
+  const extra = containerWidth - sum;
+  const flexIds = lockedId ? order.filter((id) => id !== lockedId) : [...order];
+  const flexSum = flexIds.reduce((total, id) => total + (widths[id] ?? 0), 0);
+  if (flexIds.length === 0 || flexSum <= 0) {
+    const fallback = lockedId && widths[lockedId] != null ? lockedId : order[0];
+    if (fallback) widths[fallback] += extra;
+    return widths;
+  }
+
+  let assigned = 0;
+  flexIds.forEach((id, index) => {
+    const add =
+      index === flexIds.length - 1 ? extra - assigned : Math.round((extra * widths[id]!) / flexSum);
+    widths[id]! += add;
+    assigned += add;
+  });
   return widths;
 }
 

@@ -63,6 +63,8 @@ export class FolderService {
     let knownFields = allFields.filter(
       (field) => field.typeAsString?.toLowerCase() !== "computed",
     );
+    // Sort có thể bỏ khi $orderby báo thiếu cột (khác ghost $select).
+    let sort = options.sort;
 
     for (let attempt = 1; attempt <= MAX_GHOST_FIELD_ATTEMPTS; attempt++) {
       try {
@@ -70,7 +72,7 @@ export class FolderService {
           knownFields.map((field) => field.internalName),
         );
         this.itemFieldNames = selectedFields;
-        const sortField = knownFields.find((field) => field.internalName === options.sort?.field);
+        const sortField = knownFields.find((field) => field.internalName === sort?.field);
         return await this.rest.get<RestODataCollection<RestListItem>>(
           listItemsPath(library.listId),
           {
@@ -78,7 +80,7 @@ export class FolderService {
               fileDirRef,
               top,
               selectedFields,
-              listItemsOrderby(options.sort, sortField?.typeAsString),
+              listItemsOrderby(sort, sortField?.typeAsString),
             ),
             signal: options.signal,
           },
@@ -86,13 +88,27 @@ export class FolderService {
       } catch (error) {
         const missing = extractMissingField(error);
         if (!missing || attempt >= MAX_GHOST_FIELD_ATTEMPTS) throw error;
+
+        let progressed = false;
+
+        // $orderby path (vd. File/Length → 'File') hoặc đúng cột đang sort: bỏ sort.
+        if (sort && (sort.field === missing || missing === "File")) {
+          sort = undefined;
+          progressed = true;
+        }
+
         const next = knownFields.filter((field) => field.internalName !== missing);
-        if (next.length === knownFields.length) throw error;
-        this.fields.exclude(missing);
-        knownFields = next;
+        if (next.length !== knownFields.length) {
+          this.fields.exclude(missing);
+          knownFields = next;
+          progressed = true;
+        }
+
+        if (!progressed) throw error;
       }
     }
 
     throw new Error("listChildren: hết lần thử ghost field");
   }
 }
+
