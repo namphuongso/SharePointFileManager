@@ -58,8 +58,12 @@ export const useFileManagerStyles = makeStyles({
     minHeight: "0",
     overflow: "auto",
   },
-  table: {
+  /** Đo bề rộng khả dụng; bảng bên trong có thể rộng hơn → listPane cuộn ngang. */
+  tableViewport: {
     width: "100%",
+    minWidth: "0",
+  },
+  table: {
     borderCollapse: "separate",
     borderSpacing: "0",
     tableLayout: "fixed",
@@ -168,12 +172,6 @@ export const useFileManagerStyles = makeStyles({
   headerSortGlyph: {
     flexShrink: 0,
     color: tokens.colorBrandForeground1,
-  },
-  headerMenuPopover: {
-    minWidth: "220px",
-    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke3}`,
-    borderRadius: tokens.borderRadiusLarge,
-    boxShadow: tokens.shadow8,
   },
   row: {
     cursor: "default",

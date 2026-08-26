@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
 import {
   Table,
@@ -9,7 +10,7 @@ import {
   mergeClasses,
 } from "@fluentui/react-components";
 import type { FileListColumn, FileListProps } from "../../types";
-import { defaultColumnWidth, minColumnWidth } from "../../utils/columnLayout";
+import { defaultColumnWidth, fitColumnWidths, minColumnWidth } from "../../utils/columnLayout";
 import { formatBytes, formatDate, formatItemCount } from "../../utils/format";
 import { ColumnHeaderMenu } from "./ColumnHeaderMenu";
 import { FileTypeIcon } from "./FileTypeIcon";
@@ -42,68 +43,90 @@ export function FileList({
   extraColumnMenuGroups,
 }: FileListProps) {
   const styles = useFileManagerStyles();
-  const tableWidth = columns.reduce(
-    (sum, col) => sum + (columnWidths[col.internalName] ?? defaultColumnWidth(col.internalName)),
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setViewportWidth(width);
+    });
+    ro.observe(el);
+    setViewportWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+
+  const columnIds = useMemo(() => columns.map((col) => col.internalName), [columns]);
+  const displayWidths = useMemo(
+    () => fitColumnWidths(columnWidths, columnIds, viewportWidth),
+    [columnWidths, columnIds, viewportWidth],
+  );
+  const tableWidth = columnIds.reduce(
+    (sum, id) => sum + (displayWidths[id] ?? defaultColumnWidth(id)),
     0,
   );
 
   return (
-    <Table
-      size="small"
-      aria-label={messages.files}
-      className={styles.table}
-      style={{ minWidth: tableWidth }}
-      noNativeElements={false}
-    >
-      <colgroup>
-        {columns.map((col) => {
-          const width = columnWidths[col.internalName] ?? defaultColumnWidth(col.internalName);
-          return (
-            <col
-              key={col.internalName}
-              style={{ width, minWidth: minColumnWidth(col.internalName) }}
-            />
-          );
-        })}
-      </colgroup>
-      <TableHeader>
-        <TableRow className={styles.headerRow}>
+    <div ref={viewportRef} className={styles.tableViewport}>
+      <Table
+        size="small"
+        aria-label={messages.files}
+        className={styles.table}
+        style={{ width: tableWidth, minWidth: tableWidth }}
+        noNativeElements={false}
+      >
+        <colgroup>
           {columns.map((col) => {
-            const width = columnWidths[col.internalName] ?? defaultColumnWidth(col.internalName);
+            const width = displayWidths[col.internalName] ?? defaultColumnWidth(col.internalName);
             return (
-              <ColumnHeaderMenu
+              <col
                 key={col.internalName}
-                title={col.title}
-                field={col.internalName}
-                typeAsString={col.typeAsString}
-                sort={sort}
-                onSort={onSort}
-                messages={messages}
-                className={mergeClasses(styles.headerCell, cellClass(styles, col.kind))}
-                extraGroups={extraColumnMenuGroups}
-                width={width}
-                minWidth={minColumnWidth(col.internalName)}
-                onResize={(next) => onColumnResize(col.internalName, next)}
-                onResizeEnd={(next) => onColumnResizeEnd(col.internalName, next)}
-                onReorder={onColumnReorder}
+                style={{ width, minWidth: minColumnWidth(col.internalName) }}
               />
             );
           })}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((item) => (
-          <FileRow
-            key={item.id}
-            item={item}
-            locale={locale}
-            messages={messages}
-            onOpenFolder={onOpenFolder}
-            columns={columns}
-          />
-        ))}
-      </TableBody>
-    </Table>
+        </colgroup>
+        <TableHeader>
+          <TableRow className={styles.headerRow}>
+            {columns.map((col) => {
+              const width = displayWidths[col.internalName] ?? defaultColumnWidth(col.internalName);
+              return (
+                <ColumnHeaderMenu
+                  key={col.internalName}
+                  title={col.title}
+                  field={col.internalName}
+                  typeAsString={col.typeAsString}
+                  sort={sort}
+                  onSort={onSort}
+                  messages={messages}
+                  className={mergeClasses(styles.headerCell, cellClass(styles, col.kind))}
+                  extraGroups={extraColumnMenuGroups}
+                  width={width}
+                  minWidth={minColumnWidth(col.internalName)}
+                  onResize={(next) => onColumnResize(col.internalName, next)}
+                  onResizeEnd={(next) => onColumnResizeEnd(col.internalName, next)}
+                  onReorder={onColumnReorder}
+                />
+              );
+            })}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <FileRow
+              key={item.id}
+              item={item}
+              locale={locale}
+              messages={messages}
+              onOpenFolder={onOpenFolder}
+              columns={columns}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 

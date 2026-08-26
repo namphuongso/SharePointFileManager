@@ -14,11 +14,26 @@ const SORTABLE_TYPES = new Set([
   "guid",
 ]);
 
-/** Cột REST $orderby được: 3 cột cố định, Author/Editor, kiểu nguyên thủy. */
-export function isSortableLibraryField(internalName: string, typeAsString?: string): boolean {
-  if (SORTABLE_FIXED.has(internalName) || PERSON_ORDERBY.has(internalName)) return true;
+/** Cột REST $orderby được: 3 cột cố định, Author/Editor, kiểu nguyên thủy (không Note/Lookup/multi). */
+export function isSortableLibraryField(
+  internalName: string,
+  typeAsString?: string,
+): boolean {
+  if (SORTABLE_FIXED.has(internalName) || PERSON_ORDERBY.has(internalName))
+    return true;
   const type = typeAsString?.toLowerCase();
-  if (!type || type === "computed") return false;
+  if (
+    !type ||
+    type === "computed" ||
+    type === "calculated" ||
+    type === "note" ||
+    type === "lookup" ||
+    type === "lookupmulti" ||
+    type === "usermulti" ||
+    type === "multichoice"
+  ) {
+    return false;
+  }
   return SORTABLE_TYPES.has(type);
 }
 
@@ -33,6 +48,7 @@ export function listItemsOrderby(
 
 function orderbyProperty(field: string, typeAsString?: string): string {
   if (field === "ID") return "Id";
+  if (field === "File_x0020_Size") return "File/Length";
   if (PERSON_ORDERBY.has(field) || typeAsString?.toLowerCase() === "user") {
     return `${field}/Title`;
   }

@@ -207,7 +207,9 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
       <div className={styles.listCard}>
         <div ref={rootRef} className={styles.listPane}>
           {childrenQuery.isPending ? <LibrarySkeleton /> : null}
-          {!childrenQuery.isPending && items.length === 0 ? <EmptyState messages={messages} /> : null}
+          {!childrenQuery.isPending && items.length === 0 ? (
+            <EmptyState messages={messages} />
+          ) : null}
           {!childrenQuery.isPending && items.length > 0 ? (
             <FileList
               items={items}

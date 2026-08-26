@@ -1,7 +1,10 @@
 export { createMsalTokenProvider } from "./auth/createMsalTokenProvider";
 export { SharePointProvider } from "./provider/SharePointProvider";
 export { SharePointAppProvider } from "./provider/SharePointAppProvider";
-export { useSharePointApp, useOptionalSharePointApp } from "./provider/useSharePointApp";
+export {
+  useSharePointApp,
+  useOptionalSharePointApp,
+} from "./provider/useSharePointApp";
 export { sharePointLightTheme, sharePointDarkTheme } from "./fluent/theme";
 export { useSharePoint } from "./provider/context";
 export { SharePointFileManager } from "./components/file-manager/SharePointFileManager";

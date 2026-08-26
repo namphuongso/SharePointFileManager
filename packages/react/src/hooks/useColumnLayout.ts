@@ -21,6 +21,24 @@ export function useColumnLayout(scope: string, columnIds: readonly string[]) {
 
   const order = useMemo(() => mergeColumnOrder(layout?.order, columnIds), [layout?.order, columnIds]);
 
+  /** Ghi thứ tự lần đầu / khi bật cột mới — để cột tick thêm luôn append cuối, không theo catalog. */
+  useEffect(() => {
+    if (columnIds.length === 0) return;
+    setLayout((current) => {
+      const merged = mergeColumnOrder(current?.order, columnIds);
+      const keptVisible = (current?.order ?? []).filter((id) => columnIds.includes(id));
+      const same =
+        keptVisible.length === merged.length && keptVisible.every((id, index) => id === merged[index]);
+      if (current?.order && same) return current;
+      const next: ColumnLayout = {
+        order: persistColumnOrder(current?.order, merged),
+        widths: current?.widths ?? {},
+      };
+      writeColumnLayout(scope, next);
+      return next;
+    });
+  }, [columnIds, scope]);
+
   const widths = useMemo(() => {
     const next: Record<string, number> = {};
     for (const id of order) {

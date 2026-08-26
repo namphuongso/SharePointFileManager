@@ -118,7 +118,10 @@ export function ColumnHeaderMenu({
             <div
               role="button"
               tabIndex={0}
-              className={mergeClasses(styles.headerMenuButton, direction && styles.headerMenuButtonSorted)}
+              className={mergeClasses(
+                styles.headerMenuButton,
+                direction && styles.headerMenuButtonSorted,
+              )}
               aria-label={
                 !direction
                   ? title
@@ -138,7 +141,7 @@ export function ColumnHeaderMenu({
               )}
             </div>
           </MenuTrigger>
-          <MenuPopover className={styles.headerMenuPopover}>
+          <MenuPopover>
             <MenuList>
               {groups.map((group, index) => (
                 <Fragment key={group.id}>

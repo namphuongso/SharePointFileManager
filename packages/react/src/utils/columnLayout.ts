@@ -21,19 +21,37 @@ export function minColumnWidth(internalName: string): number {
 }
 
 /**
- * Ghép thứ tự đã lưu với cột đang hiện: giữ vị trí cũ, cột mới chen vào cuối
- * (trước Size nếu Size vẫn là cột cuối mặc định).
+ * Viewport rộng hơn tổng cột → cộng phần dư vào Name (full width).
+ * Viewport hẹp hơn → giữ width gốc (caller cuộn ngang, không ép cột).
+ */
+export function fitColumnWidths(
+  base: Readonly<Record<string, number>>,
+  order: readonly string[],
+  containerWidth: number,
+): Record<string, number> {
+  const widths: Record<string, number> = {};
+  let sum = 0;
+  for (const id of order) {
+    const w = base[id] ?? defaultColumnWidth(id);
+    widths[id] = w;
+    sum += w;
+  }
+  if (containerWidth <= 0 || sum <= 0 || sum >= containerWidth) return widths;
+
+  const flexId = order.includes(NAME_FIELD) ? NAME_FIELD : order[0];
+  if (!flexId) return widths;
+  widths[flexId] = widths[flexId]! + (containerWidth - sum);
+  return widths;
+}
+
+/**
+ * Ghép thứ tự đã lưu với cột đang hiện: giữ vị trí cũ,
+ * cột mới (bật từ bộ lọc) luôn thêm cuối — không chen trước Size.
  */
 export function mergeColumnOrder(stored: readonly string[] | undefined, visible: readonly string[]): string[] {
   const allowed = new Set(visible);
   const kept = (stored ?? []).filter((id) => allowed.has(id));
   const missing = visible.filter((id) => !kept.includes(id));
-  if (missing.length === 0) return kept;
-
-  const sizeIndex = kept.lastIndexOf(SIZE_FIELD);
-  if (sizeIndex >= 0) {
-    return [...kept.slice(0, sizeIndex), ...missing, ...kept.slice(sizeIndex)];
-  }
   return [...kept, ...missing];
 }
 
