@@ -4,7 +4,10 @@ import { useSharePoint } from "../provider/context";
 import { queryKeys } from "./queryKeys";
 
 /** Một cấp con; phân trang theo @odata.nextLink. Sort nằm queryKey để GET lại trang đầu. */
-export function useFolderChildren(folderId: string | undefined, sort?: ListChildrenSort) {
+export function useFolderChildren(
+  folderId: string | undefined,
+  sort?: ListChildrenSort,
+) {
   const { client, locale } = useSharePoint();
   return useInfiniteQuery({
     queryKey: queryKeys.children(

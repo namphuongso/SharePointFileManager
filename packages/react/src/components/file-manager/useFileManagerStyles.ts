@@ -58,9 +58,12 @@ export const useFileManagerStyles = makeStyles({
     minHeight: "0",
     overflow: "auto",
   },
-  table: {
+  /** Đo bề rộng khả dụng; bảng full ngang khi hẹp hơn viewport, rộng hơn → listPane cuộn ngang. */
+  tableViewport: {
     width: "100%",
-    minWidth: "720px",
+    minWidth: "0",
+  },
+  table: {
     borderCollapse: "separate",
     borderSpacing: "0",
     tableLayout: "fixed",
@@ -78,11 +81,59 @@ export const useFileManagerStyles = makeStyles({
     paddingTop: "0",
     paddingBottom: "0",
     paddingLeft: "4px",
-    paddingRight: "4px",
+    paddingRight: "12px",
     backgroundColor: tokens.colorNeutralBackground1,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderBottom: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke3}`,
     textAlign: "left",
     verticalAlign: "middle",
+    overflow: "visible",
+    cursor: "grab",
+    userSelect: "none",
+    ":active": {
+      cursor: "grabbing",
+    },
+  },
+  headerCellDropBefore: {
+    boxShadow: `inset 2px 0 0 ${tokens.colorBrandStroke1}`,
+  },
+  headerCellDropAfter: {
+    boxShadow: `inset -2px 0 0 ${tokens.colorBrandStroke1}`,
+  },
+  /** Gạch ngắn (cách mép trên/dưới); chỉ hiện khi hover/kéo đúng tay cầm đó. */
+  columnResizeHandle: {
+    position: "absolute",
+    top: "0",
+    right: "0",
+    zIndex: 2,
+    width: "8px",
+    height: "100%",
+    padding: "0",
+    border: "none",
+    backgroundColor: "transparent",
+    cursor: "col-resize",
+    "::after": {
+      content: '""',
+      position: "absolute",
+      top: "10px",
+      bottom: "10px",
+      left: "3px",
+      width: "1px",
+      opacity: 0,
+      backgroundColor: tokens.colorNeutralStroke2,
+    },
+    ":hover::after": {
+      opacity: 1,
+      backgroundColor: tokens.colorBrandForeground1,
+    },
+    ":hover": {
+      backgroundColor: "transparent",
+    },
+  },
+  columnResizeHandleActive: {
+    "::after": {
+      opacity: 1,
+      backgroundColor: tokens.colorBrandForeground1,
+    },
   },
   headerTitle: {
     display: "block",
@@ -122,12 +173,6 @@ export const useFileManagerStyles = makeStyles({
     flexShrink: 0,
     color: tokens.colorBrandForeground1,
   },
-  headerMenuPopover: {
-    minWidth: "220px",
-    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke3}`,
-    borderRadius: tokens.borderRadiusLarge,
-    boxShadow: tokens.shadow8,
-  },
   row: {
     cursor: "default",
     ":hover": {
@@ -152,18 +197,16 @@ export const useFileManagerStyles = makeStyles({
     textOverflow: "ellipsis",
   },
   nameCell: {
-    width: "36%",
-    minWidth: "240px",
     color: tokens.colorNeutralForeground1,
   },
   modifiedCell: {
-    width: "148px",
+    minWidth: "0",
   },
   extraCell: {
-    width: "168px",
+    minWidth: "0",
   },
   sizeCell: {
-    width: "112px",
+    minWidth: "0",
   },
   nameInner: {
     display: "flex",
@@ -191,15 +234,15 @@ export const useFileManagerStyles = makeStyles({
     overflow: "hidden",
     textOverflow: "ellipsis",
     verticalAlign: "middle",
-    paddingTop: "6px",
-    paddingBottom: "6px",
-    paddingLeft: "12px",
-    paddingRight: "12px",
+    paddingTop: "3px",
+    paddingBottom: "3px",
+    paddingLeft: "8px",
+    paddingRight: "8px",
     borderRadius: tokens.borderRadiusCircular,
     backgroundColor: tokens.colorNeutralBackground3,
     color: tokens.colorNeutralForeground1,
-    fontSize: tokens.fontSizeBase300,
-    lineHeight: tokens.lineHeightBase300,
+    fontSize: tokens.fontSizeBase200,
+    lineHeight: tokens.lineHeightBase200,
   },
   loadMore: {
     display: "flex",

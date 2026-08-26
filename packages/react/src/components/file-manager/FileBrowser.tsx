@@ -11,13 +11,14 @@ import {
 import { ArrowClockwiseRegular, HomeRegular } from "@fluentui/react-icons";
 import { useSharePoint } from "../../provider/context";
 import { getErrorMessage } from "../../hooks/getErrorMessage";
+import { useColumnLayout } from "../../hooks/useColumnLayout";
 import { useColumnSort } from "../../hooks/useColumnSort";
 import { useFolderChildren } from "../../hooks/useFolderChildren";
 import { useLoadMoreOnScroll } from "../../hooks/useLoadMoreOnScroll";
 import { useLibraryFields } from "../../hooks/useLibraryFields";
 import { useVisibleExtraColumns } from "../../hooks/useVisibleExtraColumns";
 import { fieldLabel } from "../../i18n/messages";
-import type { BreadcrumbCrumb, FileBrowserProps } from "../../types";
+import type { BreadcrumbCrumb, FileBrowserProps, FileListColumn } from "../../types";
 import { ColumnPicker } from "./ColumnPicker";
 import { EmptyState } from "./EmptyState";
 import { ErrorBanner } from "./ErrorBanner";
@@ -101,24 +102,51 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
           internalName: f.internalName,
           title: fieldLabel(messages, f.internalName, f.title),
           typeAsString: f.typeAsString,
+          kind: "extra" as const,
         })),
     [selectableLibraryFields, messages, resolvedVisible],
   );
 
   /** Nhãn 3 cột cố định chuẩn SharePoint theo locale; view thiếu cột thì fallback messages. */
-  const fixedTitles = useMemo(() => {
+  const defaultColumns = useMemo((): FileListColumn[] => {
     const titleBy = new Map(
       libraryFields.map((field) => [
         field.internalName,
         fieldLabel(messages, field.internalName, field.title),
       ]),
     );
-    return {
-      name: titleBy.get("FileLeafRef"),
-      modified: titleBy.get("Modified"),
-      size: titleBy.get("File_x0020_Size"),
-    };
-  }, [libraryFields, messages]);
+    return [
+      {
+        internalName: "FileLeafRef",
+        title: titleBy.get("FileLeafRef") ?? messages.name,
+        typeAsString: "Text",
+        kind: "name",
+      },
+      {
+        internalName: "Modified",
+        title: titleBy.get("Modified") ?? messages.modified,
+        typeAsString: "DateTime",
+        kind: "modified",
+      },
+      ...extraColumns,
+      {
+        internalName: "File_x0020_Size",
+        title: titleBy.get("File_x0020_Size") ?? messages.size,
+        typeAsString: "Number",
+        kind: "size",
+      },
+    ];
+  }, [libraryFields, messages, extraColumns]);
+
+  const columnIds = useMemo(() => defaultColumns.map((col) => col.internalName), [defaultColumns]);
+  const { order, widths, onReorder, onResize, onResizeEnd } = useColumnLayout(columnScope, columnIds);
+  const columns = useMemo(() => {
+    const byId = new Map(defaultColumns.map((col) => [col.internalName, col]));
+    return order.flatMap((id) => {
+      const col = byId.get(id);
+      return col ? [col] : [];
+    });
+  }, [defaultColumns, order]);
 
   function openFolder(item: SharePointItem) {
     if (item.type !== "folder") return;
@@ -179,15 +207,20 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
       <div className={styles.listCard}>
         <div ref={rootRef} className={styles.listPane}>
           {childrenQuery.isPending ? <LibrarySkeleton /> : null}
-          {!childrenQuery.isPending && items.length === 0 ? <EmptyState messages={messages} /> : null}
+          {!childrenQuery.isPending && items.length === 0 ? (
+            <EmptyState messages={messages} />
+          ) : null}
           {!childrenQuery.isPending && items.length > 0 ? (
             <FileList
               items={items}
               locale={locale}
               messages={messages}
               onOpenFolder={openFolder}
-              extraColumns={extraColumns}
-              fixedTitles={fixedTitles}
+              columns={columns}
+              columnWidths={widths}
+              onColumnResize={onResize}
+              onColumnResizeEnd={onResizeEnd}
+              onColumnReorder={onReorder}
               sort={sort}
               onSort={onSort}
             />

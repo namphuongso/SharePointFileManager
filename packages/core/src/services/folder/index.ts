@@ -1,4 +1,2 @@
 export { FolderService } from "./folder";
-export {
-  isSortableLibraryField,
-} from "./list-items-orderby";
+export { isSortableLibraryField } from "./list-items-orderby";

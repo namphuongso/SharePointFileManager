@@ -18,7 +18,7 @@ Nguồn: cụm Globe / Cột / Refresh. Đường dẫn thư mục dùng **Bread
 ## Icon
 
 - Toolbar và action: chỉ **Regular**, không `*Filled`. `fontSize={20}` trong nút 32px.
-- Icon loại file/folder trong bảng giữ glyph màu, không đổi outline.
+- Icon loại file/folder trong bảng: `@fluentui/react-icons-file-type` (CDN 365), không SVG tự vẽ / outline Regular.
 
 ## Bảng và canvas
 

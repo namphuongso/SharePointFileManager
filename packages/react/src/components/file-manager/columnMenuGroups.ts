@@ -50,7 +50,7 @@ function sortLabels(
   if (field === "Modified" || field === "Created" || type === "datetime") {
     return { asc: messages.sortOldest, desc: messages.sortNewest };
   }
-  if (field === "File_x0020_Size" || (type && NUMBER_TYPES.has(type))) {
+  if (type && NUMBER_TYPES.has(type)) {
     return { asc: messages.sortSmallest, desc: messages.sortLargest };
   }
   return { asc: messages.sortAZ, desc: messages.sortZA };

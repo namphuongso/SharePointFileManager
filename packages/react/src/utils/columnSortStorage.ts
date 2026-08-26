@@ -10,7 +10,7 @@ function isSortDirection(value: unknown): value is ListChildrenSort["direction"]
   return value === "asc" || value === "desc";
 }
 
-/** Đọc sort cột đã chọn. JSON hỏng / SSR → không sort (mặc định SharePoint). */
+/** Đọc sort cột đã chọn. JSON hỏng / SSR / sort size cũ (File/Length lỗi) → mặc định SharePoint. */
 export function readColumnSort(scope: string): ListChildrenSort | undefined {
   if (typeof window === "undefined") return undefined;
   try {
@@ -25,8 +25,14 @@ export function readColumnSort(scope: string): ListChildrenSort | undefined {
     ) {
       return undefined;
     }
+    const field = (parsed as ListChildrenSort).field;
+    // Sort size từng map $orderby=File/Length → Column 'File' does not exist.
+    if (field === "File_x0020_Size") {
+      window.localStorage.removeItem(storageKey(scope));
+      return undefined;
+    }
     return {
-      field: (parsed as ListChildrenSort).field,
+      field,
       direction: (parsed as ListChildrenSort).direction,
     };
   } catch {

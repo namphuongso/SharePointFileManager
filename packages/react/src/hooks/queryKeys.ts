@@ -8,7 +8,16 @@ export const queryKeys = {
     sortField = "",
     sortDirection = "",
   ) =>
-    ["sp", siteId, library, locale, "children", folderId, sortField, sortDirection] as const,
+    [
+      "sp",
+      siteId,
+      library,
+      locale,
+      "children",
+      folderId,
+      sortField,
+      sortDirection,
+    ] as const,
   fields: (siteId: string, library: string, locale: string) =>
     ["sp", siteId, library, locale, "fields"] as const,
 };

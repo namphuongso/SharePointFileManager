@@ -29,14 +29,25 @@ export interface BreadcrumbCrumb {
   name: string;
 }
 
+export type FileListColumnKind = "name" | "modified" | "size" | "extra";
+
+export interface FileListColumn {
+  internalName: string;
+  title: string;
+  typeAsString?: string;
+  kind: FileListColumnKind;
+}
+
 export interface FileListProps {
   items: SharePointItem[];
   locale: string;
   messages: Messages;
   onOpenFolder: (item: SharePointItem) => void;
-  /** Nhãn 3 cột cố định theo SharePoint locale; thiếu thì fallback messages. */
-  fixedTitles?: { name?: string; modified?: string; size?: string };
-  extraColumns?: { internalName: string; title: string; typeAsString?: string }[];
+  columns: FileListColumn[];
+  columnWidths: Record<string, number>;
+  onColumnResize: (field: string, width: number) => void;
+  onColumnResizeEnd: (widths: Record<string, number>) => void;
+  onColumnReorder: (fromField: string, toField: string, place: "before" | "after") => void;
   sort?: ListChildrenSort;
   onSort?: (field: string, direction: ListSortDirection, typeAsString?: string) => void;
   /** Nhóm menu thêm — nối sau sort. */
@@ -67,6 +78,11 @@ export interface ColumnHeaderMenuProps {
   messages: Messages;
   className: string;
   extraGroups?: ColumnMenuGroup[];
+  width: number;
+  minWidth: number;
+  onResize: (width: number) => void;
+  onResizeEnd: (width: number) => void;
+  onReorder: (fromField: string, toField: string, place: "before" | "after") => void;
 }
 
 export interface EmptyStateProps {
@@ -79,37 +95,9 @@ export interface ErrorBannerProps {
   retryLabel?: string;
 }
 
-export type FileKind =
-  | "folder"
-  | "word"
-  | "excel"
-  | "powerpoint"
-  | "pdf"
-  | "image"
-  | "video"
-  | "archive"
-  | "generic";
-
 export type FileTypeIconSize = "sm" | "md" | "lg";
 
 export interface FileTypeIconProps {
   item: SharePointItem;
   size?: FileTypeIconSize;
-}
-
-export interface FolderIconProps {
-  size: number;
-}
-
-export interface DocumentIconProps {
-  color: string;
-  accent: string;
-  glyph: string;
-  size: number;
-}
-
-export interface FileIconStyle {
-  color: string;
-  accent: string;
-  glyph: string;
 }
