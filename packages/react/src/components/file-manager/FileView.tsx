@@ -10,7 +10,7 @@ import {
 } from "@fluentui/react-components";
 import type { FileListColumn, FileListProps } from "../../types";
 import { defaultColumnWidth, minColumnWidth } from "../../utils/columnLayout";
-import { formatBytes, formatItemCount, formatRelativeDate } from "../../utils/format";
+import { formatBytes, formatDate, formatItemCount } from "../../utils/format";
 import { ColumnHeaderMenu } from "./ColumnHeaderMenu";
 import { FileTypeIcon } from "./FileTypeIcon";
 import { useFileManagerStyles } from "./useFileManagerStyles";
@@ -154,12 +154,12 @@ function renderColumnCell(
     );
   }
   if (column.kind === "modified") {
-    return formatRelativeDate(item.lastModifiedDateTime, locale);
+    return formatDate(item.lastModifiedDateTime, locale);
   }
   if (column.kind === "size") {
     return item.type === "folder"
       ? formatItemCount(item.childItemCount, messages.itemCount)
-      : formatBytes(item.size);
+      : formatBytes(item.size, locale);
   }
   return renderExtraCell(item, column.internalName, locale, styles.personPill);
 }
@@ -196,13 +196,15 @@ function personTitle(value: unknown): string | undefined {
 }
 
 function formatFieldValue(value: unknown, internalName: string, locale: string): string {
+  // Centralize date formatting for common fields
+  if (internalName === "Created" || internalName === "Modified") {
+    const raw = value == null ? undefined : String(value);
+    return formatDate(raw, locale);
+  }
   if (value === null || value === undefined || value === "") return "—";
   if (internalName === "File_x0020_Size") {
     const size = typeof value === "number" ? value : Number(value);
-    return Number.isFinite(size) ? formatBytes(size) : "—";
-  }
-  if (internalName === "Created" || internalName === "Modified") {
-    return formatRelativeDate(String(value), locale);
+    return Number.isFinite(size) ? formatBytes(size, locale) : "—";
   }
   if (typeof value === "object" && value !== null && "Title" in value) {
     return String((value as { Title?: unknown }).Title ?? "—");

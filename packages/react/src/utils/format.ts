@@ -1,30 +1,31 @@
-/** Định dạng kích thước file trên cột Size. */
-export function formatBytes(size?: number): string {
+const SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"];
+
+/** Định dạng kích thước file trên cột Size theo locale (giống SharePoint). */
+export function formatBytes(size?: number, locale = "en"): string {
   if (size === undefined) return "—";
   if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  const decimals = size < 1024 * 1024 ? 1 : 1;
+  const formatter = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  });
+  const index = Math.min(
+    Math.floor(Math.log(size) / Math.log(1024)),
+    SIZE_UNITS.length - 1,
+  );
+  const value = size / 1024 ** index;
+  return `${formatter.format(value)} ${SIZE_UNITS[index]}`;
 }
 
-/** Thời gian tương đối (locale); quá 7 ngày thì ngày tháng tuyệt đối. */
-export function formatRelativeDate(value: string | undefined, locale: string): string {
+/** Ngày giờ tuyệt đối theo locale (giống SharePoint). */
+export function formatDate(value: string | undefined, locale: string): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-
-  const diffMs = date.getTime() - Date.now();
-  const absMs = Math.abs(diffMs);
-  const minute = 60_000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-
-  if (absMs < minute) return rtf.format(Math.round(diffMs / 1000), "second");
-  if (absMs < hour) return rtf.format(Math.round(diffMs / minute), "minute");
-  if (absMs < day) return rtf.format(Math.round(diffMs / hour), "hour");
-  if (absMs < 7 * day) return rtf.format(Math.round(diffMs / day), "day");
   return new Intl.DateTimeFormat(locale, {
-    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
