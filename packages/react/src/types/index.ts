@@ -10,6 +10,7 @@ export type {
   ColumnMenuGroup,
   ColumnHeaderMenuProps,
   EmptyStateProps,
+  ForbiddenStateProps,
   ErrorBannerProps,
   FileTypeIconSize,
   FileTypeIconProps,

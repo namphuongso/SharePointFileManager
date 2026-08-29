@@ -13,6 +13,8 @@ const vi: Messages = {
   size: "Kích thước",
   empty: "Thư mục trống",
   emptyHint: "Không có tệp hoặc thư mục nào trong thư mục này.",
+  noViewPermission: "Bạn không có quyền xem thư mục này",
+  noViewPermissionHint: "Liên hệ quản trị SharePoint nếu bạn cần quyền truy cập.",
   retry: "Thử lại",
   refresh: "Làm mới",
   loadMore: "Tải thêm",
@@ -31,6 +33,10 @@ const vi: Messages = {
   sortSmallest: "Nhỏ đến lớn",
   sortLargest: "Lớn đến nhỏ",
   resizeColumn: "Điều chỉnh độ rộng cột",
+  tabLibrary: "Theo thư mục",
+  tabAccessible: "Có quyền xem",
+  searchEmpty: "Không có nội dung",
+  searchEmptyHint: "Không tìm thấy tệp hoặc thư mục bạn có quyền xem trong thư viện này.",
   fieldLabels: {},
 };
 
@@ -41,6 +47,8 @@ const en: Messages = {
   size: "Size",
   empty: "This folder is empty",
   emptyHint: "There are no files or folders in this folder.",
+  noViewPermission: "You don't have permission to view this folder",
+  noViewPermissionHint: "Contact your SharePoint administrator if you need access.",
   retry: "Retry",
   refresh: "Refresh",
   loadMore: "Load more",
@@ -59,6 +67,10 @@ const en: Messages = {
   sortSmallest: "Smaller to larger",
   sortLargest: "Larger to smaller",
   resizeColumn: "Resize column",
+  tabLibrary: "Folders",
+  tabAccessible: "I can view",
+  searchEmpty: "Nothing to show",
+  searchEmptyHint: "No files or folders you can view were found in this library.",
   fieldLabels: {},
 };
 

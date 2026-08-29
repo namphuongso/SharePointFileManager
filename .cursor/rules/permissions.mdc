@@ -1,0 +1,64 @@
+---
+description: Quyền SharePoint — PermissionService, EffectiveBasePermissions, PermissionKind
+globs: packages/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# Phân quyền SharePoint
+
+Mọi **action ghi / thao tác có rủi ro** (upload, sửa, xóa, đổi tên, quản lý ACL, …) phải gắn quyền **trong cùng PR** nếu REST hỗ trợ qua `EffectiveBasePermissions`.
+
+## Nguồn quyền
+
+- Chỉ `SharePointRestClient.get` — không Graph.
+- User hiện tại: `EffectiveBasePermissions` → `{ High, Low }` (`SP.BasePermissions`).
+- Decode bằng `PermissionKind` (Microsoft.SharePoint.Client) — `hasPermissionKind` / `toItemCapabilities` trong core.
+- UI/component **không** gọi REST quyền trực tiếp — qua `SharePointClient.permissions` hoặc hook `packages/react`.
+
+## Identifier (UniqueId)
+
+- File/folder: **UniqueId** (`SharePointItem.id`) — không list item Id, ServerRelativeUrl, FileDirRef.
+- Alias `"root"` → `library.rootFolderUniqueId` trước khi gọi (giống `resolve-folder-url`).
+- Path REST:
+  - Library (coarse): `web/lists(guid'{listId}')/effectiveBasePermissions`
+  - File/folder (UniqueId): `web/lists(guid'{listId}')/GetItemByUniqueId(guid'{uniqueId}')/effectiveBasePermissions`
+- Cấm `GetFolderById`/`GetFileById` + `ListItemAllFields/effectiveBasePermissions` (404 trên SharePoint Online).
+
+Doc: [Web/List/ListItem.effectiveBasePermissions](https://learn.microsoft.com/en-us/previous-versions/office/sharepoint-visio/jj245395(v=office.15)), [PermissionKind](https://learn.microsoft.com/en-us/dotnet/api/microsoft.sharepoint.client.permissionkind).
+
+## Map action → PermissionKind
+
+| Action | PermissionKind | Scope check |
+|--------|----------------|-------------|
+| Browse / list | `ViewListItems` | `useFolderViewCapabilities` → gate `useFolderChildren`; `ForbiddenState` khi denied |
+| Mở / tải file | `OpenItems` | file UniqueId hoặc folder hiện tại |
+| Upload / tạo folder | `AddListItems` | folder đích UniqueId (root = rootFolderUniqueId) |
+| Sửa tên / metadata | `EditListItems` | file/folder UniqueId |
+| Xóa | `DeleteListItems` | file/folder UniqueId |
+| Quản lý quyền (ACL) | `ManagePermissions` | file/folder UniqueId hoặc library |
+
+Move/copy: check **cả nguồn lẫn đích** (`EditListItems`/`DeleteListItems` + `AddListItems` trên folder đích).
+
+## Khi thêm tính năng mới
+
+1. **Core:** service ghi (POST/MERGE/DELETE) tách `services/<feature>/` — không nhồi vào `folder` hay `permissions`.
+2. **Quyền:** action có dòng trong bảng map → dùng `ItemCapabilities` / `getItemCapabilities`; thêm boolean nếu cần `PermissionKind` mới.
+3. **React:** nút/menu `disabled` khi capability = false; vẫn xử lý `SharePointErrorCode.Forbidden` khi POST thất bại.
+4. **Cache:** library/folder — React Query; item — lazy khi chọn / mở menu. **Cấm** GET `effectiveBasePermissions` cho mọi dòng `listChildren`.
+5. **Không hỗ trợ REST bitmask** (share link hiện đại, DLP, sensitivity label): ghi rõ trong PR; không gate bằng tên group hardcode.
+
+## Cấm
+
+- Graph / CSOM / PnPjs cho check quyền
+- Hardcode tên group SharePoint ("Members", "Visitors")
+- `fetch` SharePoint từ `packages/react`
+- UI hiện nút action mà không check capability (trừ browse read-only)
+
+```ts
+// ❌
+<Button onClick={upload}>Upload</Button>
+
+// ✅
+const caps = await client.permissions.getFolderCapabilities(folderUniqueId);
+<Button disabled={!caps.canAdd} onClick={upload}>Upload</Button>
+```

@@ -50,6 +50,8 @@ export interface FileListProps {
   onColumnReorder: (fromField: string, toField: string, place: "before" | "after") => void;
   sort?: ListChildrenSort;
   onSort?: (field: string, direction: ListSortDirection, typeAsString?: string) => void;
+  /** Mặc định isSortableLibraryField; Search dùng isSortableSearchField (Size được). */
+  isSortable?: (field: string, typeAsString?: string) => boolean;
   /** Nhóm menu thêm — nối sau sort. */
   extraColumnMenuGroups?: ColumnMenuGroup[];
 }
@@ -77,6 +79,7 @@ export interface ColumnHeaderMenuProps {
   onSort?: (field: string, direction: ListSortDirection, typeAsString?: string) => void;
   messages: Messages;
   className: string;
+  isSortable?: (field: string, typeAsString?: string) => boolean;
   extraGroups?: ColumnMenuGroup[];
   width: number;
   minWidth: number;
@@ -86,6 +89,13 @@ export interface ColumnHeaderMenuProps {
 }
 
 export interface EmptyStateProps {
+  messages: Messages;
+  /** Ghi đè tiêu đề / gợi ý (vd. tab Search). */
+  title?: string;
+  hint?: string;
+}
+
+export interface ForbiddenStateProps {
   messages: Messages;
 }
 

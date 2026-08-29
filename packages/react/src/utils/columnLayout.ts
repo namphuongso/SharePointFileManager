@@ -45,7 +45,7 @@ export function fitColumnWidths(
   const flexSum = flexIds.reduce((total, id) => total + (widths[id] ?? 0), 0);
   if (flexIds.length === 0 || flexSum <= 0) {
     const fallback = lockedId && widths[lockedId] != null ? lockedId : order[0];
-    if (fallback) widths[fallback] += extra;
+    if (fallback) widths[fallback] = (widths[fallback] ?? 0) + extra;
     return widths;
   }
 

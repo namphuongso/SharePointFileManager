@@ -1,5 +1,9 @@
 import { Fragment, useCallback, useMemo, useState } from "react";
-import { FIXED_LIBRARY_FIELD_NAMES, type SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
+import {
+  FIXED_LIBRARY_FIELD_NAMES,
+  isSortableSearchField,
+  type SharePointItem,
+} from "@namphuongso/sharepoint-file-manager-core";
 import {
   Breadcrumb,
   BreadcrumbButton,
@@ -8,12 +12,18 @@ import {
   Button,
   mergeClasses,
 } from "@fluentui/react-components";
-import { ArrowClockwiseRegular, HomeRegular } from "@fluentui/react-icons";
+import {
+  ArrowClockwiseRegular,
+  DocumentSearchRegular,
+  HomeRegular,
+} from "@fluentui/react-icons";
 import { useSharePoint } from "../../provider/context";
 import { getErrorMessage } from "../../hooks/getErrorMessage";
+import { useAccessibleItems } from "../../hooks/useAccessibleItems";
 import { useColumnLayout } from "../../hooks/useColumnLayout";
 import { useColumnSort } from "../../hooks/useColumnSort";
 import { useFolderChildren } from "../../hooks/useFolderChildren";
+import { useFolderViewCapabilities } from "../../hooks/useFolderViewCapabilities";
 import { useLoadMoreOnScroll } from "../../hooks/useLoadMoreOnScroll";
 import { useLibraryFields } from "../../hooks/useLibraryFields";
 import { useVisibleExtraColumns } from "../../hooks/useVisibleExtraColumns";
@@ -22,6 +32,7 @@ import type { BreadcrumbCrumb, FileBrowserProps, FileListColumn } from "../../ty
 import { ColumnPicker } from "./ColumnPicker";
 import { EmptyState } from "./EmptyState";
 import { ErrorBanner } from "./ErrorBanner";
+import { ForbiddenState } from "./ForbiddenState";
 import { FileList } from "./FileView";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { LibrarySkeleton } from "./LibrarySkeleton";
@@ -36,22 +47,35 @@ const HIDE_FROM_PICKER = new Set([
   "FileSize",
 ]);
 
+type BrowserView = "library" | "accessible";
+
 /**
- * Duyệt một thư viện: command bar + list children (phân trang nextLink).
+ * Duyệt thư viện (browse) + tab Search REST (item user được xem).
  * Không tạo client — phải nằm trong SharePointProvider.
  */
 export function FileBrowser({ className, title, showLanguageSwitcher = true }: FileBrowserProps) {
   const styles = useFileManagerStyles();
   const { client, locale, messages } = useSharePoint();
   const rootId = client.config.rootItemId;
+  const [view, setView] = useState<BrowserView>("library");
   const [crumbs, setCrumbs] = useState<BreadcrumbCrumb[]>([
     { id: rootId, name: title ?? messages.files },
   ]);
   const currentFolderId = crumbs[crumbs.length - 1]?.id ?? rootId;
   const columnScope = `${client.config.siteId}:${client.cacheScope}`;
-  const { sort, onSort } = useColumnSort(columnScope);
-  const childrenQuery = useFolderChildren(currentFolderId, sort);
-  const fieldsQuery = useLibraryFields();
+  const librarySort = useColumnSort(columnScope);
+  const accessibleSort = useColumnSort(`${columnScope}:accessible`);
+  const isLibrary = view === "library";
+  const { sort, onSort } = isLibrary ? librarySort : accessibleSort;
+
+  const viewAccess = useFolderViewCapabilities(currentFolderId);
+  const childrenQuery = useFolderChildren(currentFolderId, sort, {
+    enabled: isLibrary && viewAccess.isReady && viewAccess.canView,
+  });
+  const fieldsQuery = useLibraryFields({
+    enabled:
+      view === "accessible" || (isLibrary && viewAccess.isReady && viewAccess.canView),
+  });
   const libraryFields = fieldsQuery.data ?? [];
   const selectableLibraryFields = useMemo(
     () =>
@@ -76,17 +100,41 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     extraNames,
   );
 
-  const items = useMemo(
+  const visibleExtraNames = useMemo(
+    () => extraNames.filter((name) => resolvedVisible.has(name)),
+    [extraNames, resolvedVisible],
+  );
+
+  const accessibleQuery = useAccessibleItems(sort, {
+    enabled: view === "accessible",
+    fieldInternalNames: visibleExtraNames,
+  });
+
+  const libraryItems = useMemo(
     () => childrenQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [childrenQuery.data],
   );
-  const fetchNextPage = childrenQuery.fetchNextPage;
+  const accessibleItems = useMemo(
+    () => accessibleQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [accessibleQuery.data],
+  );
+  const items = isLibrary ? libraryItems : accessibleItems;
+
+  const fetchNextLibrary = childrenQuery.fetchNextPage;
+  const fetchNextAccessible = accessibleQuery.fetchNextPage;
   const loadMore = useCallback(() => {
-    void fetchNextPage();
-  }, [fetchNextPage]);
+    if (isLibrary) void fetchNextLibrary();
+    else void fetchNextAccessible();
+  }, [isLibrary, fetchNextLibrary, fetchNextAccessible]);
+
+  const hasNextPage = isLibrary ? childrenQuery.hasNextPage : accessibleQuery.hasNextPage;
+  const isFetchingNextPage = isLibrary
+    ? childrenQuery.isFetchingNextPage
+    : accessibleQuery.isFetchingNextPage;
+
   const { rootRef, sentinelRef } = useLoadMoreOnScroll(
-    Boolean(childrenQuery.hasNextPage),
-    childrenQuery.isFetchingNextPage,
+    Boolean(hasNextPage),
+    isFetchingNextPage,
     loadMore,
   );
 
@@ -107,7 +155,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     [selectableLibraryFields, messages, resolvedVisible],
   );
 
-  /** Nhãn 3 cột cố định chuẩn SharePoint theo locale; view thiếu cột thì fallback messages. */
+  /** Nhãn 3 cột cố định + cột option (cả browse và Có quyền xem). */
   const defaultColumns = useMemo((): FileListColumn[] => {
     const titleBy = new Map(
       libraryFields.map((field) => [
@@ -150,32 +198,107 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
 
   function openFolder(item: SharePointItem) {
     if (item.type !== "folder") return;
+    if (!isLibrary) {
+      // Folder từ Search → nhảy sang browse đúng UniqueId.
+      setView("library");
+      setCrumbs([
+        { id: rootId, name: title ?? messages.files },
+        { id: item.id, name: item.name },
+      ]);
+      return;
+    }
     setCrumbs((prev) => [...prev, { id: item.id, name: item.name }]);
   }
+
+  function refreshAll() {
+    if (isLibrary) {
+      void viewAccess.refetch();
+      void childrenQuery.refetch();
+      return;
+    }
+    void accessibleQuery.refetch();
+  }
+
+  const listLoading = isLibrary
+    ? viewAccess.isLoading || (viewAccess.canView && childrenQuery.isPending)
+    : accessibleQuery.isPending;
+
+  const showLibraryForbidden = isLibrary && !listLoading && viewAccess.viewDenied;
+  const showEmpty =
+    !listLoading &&
+    !showLibraryForbidden &&
+    items.length === 0 &&
+    (isLibrary ? viewAccess.canView : !accessibleQuery.isError);
+  const showList =
+    !listLoading &&
+    !showLibraryForbidden &&
+    items.length > 0 &&
+    (isLibrary ? viewAccess.canView : true);
 
   return (
     <div className={mergeClasses(styles.root, className)}>
       <div className={styles.commandBar}>
-        <Breadcrumb size="large">
-          {crumbs.map((crumb, index) => (
-            <Fragment key={crumb.id}>
-              {index > 0 ? <BreadcrumbDivider /> : null}
+        <div className={styles.commandBarStart}>
+          <div className={styles.viewSwitch} role="tablist" aria-label={messages.files}>
+            <Button
+              appearance="subtle"
+              shape="circular"
+              className={mergeClasses(
+                styles.commandIconButton,
+                isLibrary && styles.commandIconButtonActive,
+              )}
+              icon={<HomeRegular fontSize={20} />}
+              onClick={() => setView("library")}
+              aria-label={messages.tabLibrary}
+              title={messages.tabLibrary}
+              aria-selected={isLibrary}
+              role="tab"
+            />
+            <Button
+              appearance="subtle"
+              shape="circular"
+              className={mergeClasses(
+                styles.commandIconButton,
+                !isLibrary && styles.commandIconButtonActive,
+              )}
+              icon={<DocumentSearchRegular fontSize={20} />}
+              onClick={() => setView("accessible")}
+              aria-label={messages.tabAccessible}
+              title={messages.tabAccessible}
+              aria-selected={!isLibrary}
+              role="tab"
+            />
+          </div>
+
+          {isLibrary ? (
+            <Breadcrumb size="large">
+              {crumbs.map((crumb, index) => (
+                <Fragment key={crumb.id}>
+                  {index > 0 ? <BreadcrumbDivider /> : null}
+                  <BreadcrumbItem>
+                    <BreadcrumbButton
+                      current={index === crumbs.length - 1}
+                      onClick={() => setCrumbs((prev) => prev.slice(0, index + 1))}
+                    >
+                      {crumb.name}
+                    </BreadcrumbButton>
+                  </BreadcrumbItem>
+                </Fragment>
+              ))}
+            </Breadcrumb>
+          ) : (
+            <Breadcrumb size="large">
               <BreadcrumbItem>
-                <BreadcrumbButton
-                  current={index === crumbs.length - 1}
-                  onClick={() => setCrumbs((prev) => prev.slice(0, index + 1))}
-                  icon={index === 0 ? <HomeRegular /> : undefined}
-                >
-                  {crumb.name}
-                </BreadcrumbButton>
+                <BreadcrumbButton current>{messages.tabAccessible}</BreadcrumbButton>
               </BreadcrumbItem>
-            </Fragment>
-          ))}
-        </Breadcrumb>
+            </Breadcrumb>
+          )}
+        </div>
 
         <div className={styles.commandActions}>
           {showLanguageSwitcher ? <LanguageSwitcher /> : null}
-          {libraryFields.length > 0 ? (
+          {libraryFields.length > 0 &&
+          (isLibrary ? viewAccess.canView : !accessibleQuery.isError) ? (
             <ColumnPicker
               fields={selectableLibraryFields}
               visible={resolvedVisible}
@@ -189,14 +312,22 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
             shape="circular"
             className={styles.commandIconButton}
             icon={<ArrowClockwiseRegular fontSize={20} />}
-            onClick={() => void childrenQuery.refetch()}
+            onClick={refreshAll}
             aria-label={messages.refresh}
             title={messages.refresh}
           />
         </div>
       </div>
 
-      {childrenQuery.error ? (
+      {isLibrary && viewAccess.isError ? (
+        <ErrorBanner
+          message={getErrorMessage(viewAccess.error, messages.unknownError)}
+          onRetry={() => void viewAccess.refetch()}
+          retryLabel={messages.retry}
+        />
+      ) : null}
+
+      {isLibrary && childrenQuery.error && viewAccess.canView ? (
         <ErrorBanner
           message={getErrorMessage(childrenQuery.error, messages.unknownError)}
           onRetry={() => void childrenQuery.refetch()}
@@ -204,13 +335,26 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
         />
       ) : null}
 
+      {!isLibrary && accessibleQuery.error ? (
+        <ErrorBanner
+          message={getErrorMessage(accessibleQuery.error, messages.unknownError)}
+          onRetry={() => void accessibleQuery.refetch()}
+          retryLabel={messages.retry}
+        />
+      ) : null}
+
       <div className={styles.listCard}>
         <div ref={rootRef} className={styles.listPane}>
-          {childrenQuery.isPending ? <LibrarySkeleton /> : null}
-          {!childrenQuery.isPending && items.length === 0 ? (
-            <EmptyState messages={messages} />
+          {listLoading ? <LibrarySkeleton /> : null}
+          {showLibraryForbidden ? <ForbiddenState messages={messages} /> : null}
+          {showEmpty ? (
+            <EmptyState
+              messages={messages}
+              title={isLibrary ? undefined : messages.searchEmpty}
+              hint={isLibrary ? undefined : messages.searchEmptyHint}
+            />
           ) : null}
-          {!childrenQuery.isPending && items.length > 0 ? (
+          {showList ? (
             <FileList
               items={items}
               locale={locale}
@@ -223,16 +367,17 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
               onColumnReorder={onReorder}
               sort={sort}
               onSort={onSort}
+              isSortable={isLibrary ? undefined : isSortableSearchField}
             />
           ) : null}
-          {childrenQuery.hasNextPage ? (
+          {(isLibrary ? viewAccess.canView : !accessibleQuery.isError) && hasNextPage ? (
             <div className={styles.loadMore}>
               <div ref={sentinelRef} className={styles.loadMoreSentinel} aria-hidden />
               <Button
                 appearance="subtle"
                 shape="circular"
                 className={styles.loadMoreButton}
-                disabled={childrenQuery.isFetchingNextPage}
+                disabled={isFetchingNextPage}
                 onClick={loadMore}
               >
                 {messages.loadMore}

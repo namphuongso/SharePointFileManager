@@ -44,6 +44,7 @@ export interface RestList {
 export interface RestListItem {
   Id?: number;
   GUID?: string;
+  UniqueId?: string;
   FSObjType?: number | string;
   FileSystemObjectType?: number;
   FileLeafRef?: string;

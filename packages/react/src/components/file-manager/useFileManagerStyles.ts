@@ -23,6 +23,26 @@ export const useFileManagerStyles = makeStyles({
     paddingBottom: "12px",
     flexShrink: 0,
   },
+  commandBarStart: {
+    display: "flex",
+    alignItems: "center",
+    gap: "2px",
+    minWidth: "0",
+    flex: 1,
+  },
+  /** Đổi chế độ browse / có quyền xem — pill icon trước breadcrumb. */
+  viewSwitch: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    flexShrink: 0,
+    paddingTop: "4px",
+    paddingBottom: "4px",
+    paddingLeft: "6px",
+    paddingRight: "6px",
+    borderRadius: tokens.borderRadiusCircular,
+    backgroundColor: tokens.colorNeutralBackground3,
+  },
   commandActions: {
     display: "flex",
     alignItems: "center",
@@ -42,6 +62,10 @@ export const useFileManagerStyles = makeStyles({
     height: "32px",
     maxWidth: "32px",
     color: tokens.colorNeutralForeground2,
+  },
+  commandIconButtonActive: {
+    color: tokens.colorNeutralForeground1,
+    backgroundColor: tokens.colorNeutralBackground1,
   },
   listCard: {
     flex: 1,

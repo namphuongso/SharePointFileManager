@@ -11,8 +11,10 @@ export type { SharePointErrorOptions } from "./types/errors";
 export { mapRestError } from "./errors/map-rest-error";
 export { mapStatusToCode } from "./errors/map-status-to-code";
 
-export { FolderService, isSortableLibraryField } from "./services/folder";
+export { FolderService, isSortableLibraryField, isSortableSearchField } from "./services/folder";
 export { FieldService, FIXED_LIBRARY_FIELD_NAMES } from "./services/fields";
+export { PermissionService, hasPermissionKind, toItemCapabilities } from "./services/permissions";
+export { SearchService } from "./services/search";
 export { resolveLibrary } from "./services/library";
 
 export type {
@@ -30,3 +32,13 @@ export type {
   LibraryContext,
 } from "./types/models";
 export type { ListChildrenSort, ListSortDirection } from "./types/rest";
+export { PermissionKind } from "./types/permissions";
+export type {
+  EffectiveBasePermissionsDto,
+  ItemCapabilities,
+  PermissionItemType,
+} from "./types/permissions";
+export type {
+  SearchAccessibleOptions,
+  SearchAccessiblePage,
+} from "./types/search";

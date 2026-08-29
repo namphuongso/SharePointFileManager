@@ -30,14 +30,16 @@ Hiện **không** có upload, share, checkout, search, Graph.
 
 ```text
 types/                      models, rest, errors
-client.ts                   Ghép config + REST + cache thư viện + FolderService + FieldService
+client.ts                   Ghép config + REST + cache thư viện + FolderService + FieldService + PermissionService
 auth/                       defaultSharePointScopes
 config/                     resolve-config, create-sharepoint-config
 rest/                       client GET, build-url, parse-body, throttle, odata
 services/library/           resolve theo libraryName
 services/folder/            listChildren + resolve path
 services/fields/            defaultView/viewfields + GET /fields; fallback GET /fields
-mappers/                    list item / SP.Field → model
+services/permissions/       EffectiveBasePermissions (UniqueId) → ItemCapabilities
+services/search/            GET search/query (Path thư viện, security trim) → flat list
+mappers/                    list item / SP.Field / search row → model
 errors/                     SharePointError + map HTTP/OData
 ```
 
@@ -58,13 +60,38 @@ Toolbar có menu VI/EN mặc định (`showLanguageSwitcher={false}` để ẩn)
 
 Giá trị cột trên từng dòng nằm ở `SharePointItem.fields`. Query OData encode `%20` (không `+`).
 
+## Quyền (PermissionService)
+
+Chỉ **GET** `EffectiveBasePermissions` — quyền user hiện tại, bitmask Microsoft `{ High, Low }` → `ItemCapabilities` (`canAdd`, `canEdit`, …).
+
+```text
+SharePointClient.permissions
+  getLibraryCapabilities()              listId — gate coarse khi mở thư viện
+  getFolderCapabilities(uniqueId)       GetItemByUniqueId + effectiveBasePermissions; "root" → rootFolderUniqueId
+  getFileCapabilities(uniqueId)         GetItemByUniqueId + effectiveBasePermissions
+  getItemCapabilities(type, uniqueId)   wrapper file | folder
+```
+
+Không GET quyền từng dòng `listChildren`. **React:** `useFolderViewCapabilities(folderUniqueId)` gate `canView` trước `useFolderChildren`; không quyền → `ForbiddenState`, không gọi list items. Action mới: gate UI bằng capability tương ứng — xem `.cursor/rules/permissions.mdc`.
+
+## Search — item được xem trong thư viện
+
+Tab **Có quyền xem** dùng `GET /_api/search/query` (SharePoint Search REST, không Graph). Security trim theo token; giới hạn KQL `Path` thư viện hiện tại. Flat list + `StartRow` + `sortlist` + cột option (managed properties) — không thay browse folder.
+
+```text
+SharePointClient.search
+  listAccessible({ startRow, rowLimit, sort, fieldInternalNames })
+```
+
+**React:** cùng ColumnPicker / sort header / infinite scroll như Home; mở folder → chuyển Home + breadcrumb UniqueId.
+
 ## React — thứ tự đọc
 
 ```text
 types/                      Props, Messages, MSAL
 auth/                       createMsalTokenProvider
 provider/                   AppProvider + SharePointProvider + hooks
-hooks/                      useFolderChildren, useLibraryFields, useColumnSort, getErrorMessage
+hooks/                      useFolderChildren, useAccessibleItems, useFolderViewCapabilities, useLibraryFields, useColumnSort, getErrorMessage
 fluent/                     theme, isDarkTheme
 i18n/                       messages
 utils/                      format bytes / ngày

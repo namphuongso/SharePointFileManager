@@ -25,6 +25,13 @@ function readPersistedLocale(): string | undefined {
   return window.localStorage.getItem(LOCALE_STORAGE_KEY) ?? undefined;
 }
 
+/** Khóa tái tạo client khi đổi site/thư viện hoặc instance thiếu service (HMR / bản cũ). */
+function clientInstanceKey(config: SharePointProviderProps["config"], locale: string): string {
+  return [config.siteUrl, config.libraryName ?? "", config.listId ?? "", config.rootItemId ?? "", locale].join(
+    "|",
+  );
+}
+
 /**
  * Cấp trang: tạo SharePointClient, QueryClient, Fluent theme, i18n.
  */
@@ -37,8 +44,24 @@ export function SharePointProvider({
   theme = "light",
 }: SharePointProviderProps) {
   const initialLocale = resolveInitialLocale(config.locale, locale);
+  const instanceKey = clientInstanceKey(config, initialLocale);
 
-  const [client] = useState(() => new SharePointClient({ ...config, locale: initialLocale }));
+  const [clientState, setClientState] = useState(() => ({
+    key: instanceKey,
+    client: new SharePointClient({ ...config, locale: initialLocale }),
+  }));
+  // HMR / host giữ instance cũ: tạo lại khi thiếu search hoặc đổi target.
+  if (
+    clientState.key !== instanceKey ||
+    typeof clientState.client.search?.listAccessible !== "function"
+  ) {
+    setClientState({
+      key: instanceKey,
+      client: new SharePointClient({ ...config, locale: initialLocale }),
+    });
+  }
+  const client = clientState.client;
+
   const [fallbackClient] = useState(() => new QueryClient());
   const [runtimeLocale, setRuntimeLocale] = useState(() => ({
     source: initialLocale,

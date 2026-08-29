@@ -40,6 +40,7 @@ export function FileList({
   onColumnReorder,
   sort,
   onSort,
+  isSortable,
   extraColumnMenuGroups,
 }: FileListProps) {
   const styles = useFileManagerStyles();
@@ -100,6 +101,7 @@ export function FileList({
                   typeAsString={col.typeAsString}
                   sort={sort}
                   onSort={onSort}
+                  isSortable={isSortable}
                   messages={messages}
                   className={mergeClasses(styles.headerCell, cellClass(styles, col.kind))}
                   extraGroups={extraColumnMenuGroups}
@@ -219,16 +221,16 @@ function renderExtraCell(
   return formatFieldValue(value, internalName, locale);
 }
 
-function isPersonValue(value: unknown): boolean {
-  return typeof value === "object" && value !== null && "Title" in value && "Id" in value;
-}
-
 function personTitle(value: unknown): string | undefined {
   if (typeof value === "object" && value !== null && "Title" in value) {
     const title = (value as { Title?: unknown }).Title;
     return typeof title === "string" && title.trim() ? title : undefined;
   }
   return undefined;
+}
+
+function isPersonValue(value: unknown): boolean {
+  return typeof value === "object" && value !== null && "Title" in value;
 }
 
 function formatFieldValue(value: unknown, internalName: string, locale: string): string {

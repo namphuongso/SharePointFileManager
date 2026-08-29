@@ -10,13 +10,23 @@ export function columnHeaderMenuGroups(options: {
   typeAsString?: string;
   sortDirection?: ListSortDirection;
   onSort?: (direction: ListSortDirection) => void;
+  /** Mặc định isSortableLibraryField; Search cho phép thêm Size. */
+  isSortable?: (field: string, typeAsString?: string) => boolean;
   messages: Messages;
   extraGroups?: ColumnMenuGroup[];
 }): ColumnMenuGroup[] {
-  const { field, typeAsString, sortDirection, onSort, messages, extraGroups } = options;
+  const {
+    field,
+    typeAsString,
+    sortDirection,
+    onSort,
+    isSortable = isSortableLibraryField,
+    messages,
+    extraGroups,
+  } = options;
   const groups: ColumnMenuGroup[] = [];
 
-  if (onSort && isSortableLibraryField(field, typeAsString)) {
+  if (onSort && isSortable(field, typeAsString)) {
     const labels = sortLabels(field, typeAsString, messages);
     groups.push({
       id: "sort",

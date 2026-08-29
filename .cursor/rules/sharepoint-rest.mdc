@@ -13,6 +13,8 @@ Chỉ **SharePoint REST** `GET {site}/_api/...` qua `SharePointRestClient.get`. 
 - List: `web/lists/getbytitle(...)` hoặc `web/lists` (`BaseTemplate eq 101`)
 - Một cấp file/folder: `GET web/lists(guid'{id}')/items` + `$filter=FileDirRef eq '...'` + `$select` cột mặc định **đã có trên list** + File/Folder (+ `Author/Id,Author/Title` khi view có Author) + `$expand=File,Folder` (+ Author/Editor khi có trong `$select`). `$orderby` InternalName (`FSObjType desc` + cột; person = `Author/Title`). Query encode `%20`, không `+`. Trang sau: GET `@odata.nextLink`
 - Path folder: `GetFolderById` (`$select=ServerRelativeUrl`)
+- Quyền user hiện tại: `EffectiveBasePermissions` — library `web/lists(guid'{id}')/effectiveBasePermissions`; file/folder `web/lists(guid'{listId}')/GetItemByUniqueId(guid'{uniqueId}')/effectiveBasePermissions`. UniqueId như browse; alias `"root"` → `rootFolderUniqueId`. Decode `{ High, Low }` bằng `PermissionKind` (Microsoft) — xem rule `permissions.mdc`
+- Item user được xem trong thư viện (flat, security trim): `GET search/query` + KQL `Path:"{site}{rootFolderUrl}*"` (loại `/Forms`), `$select` managed properties (`Title,Filename,Path,UniqueId,IsContainer,Size,LastModifiedTime,FileExtension`), phân trang `startrow`/`rowlimit` — không thay browse một cấp. Doc: [Search REST](https://learn.microsoft.com/en-us/sharepoint/dev/general-development/sharepoint-search-rest-api-overview)
 - Cột option: `GET .../defaultView/viewfields` ∩ catalog (giữ thứ tự view); nhãn = Title GET `/fields` theo `Accept-Language` (config.locale); fallback `GET .../fields?$select=Id,Title,InternalName&$filter=InternalName eq '...'` chỉ catalog + 3 cột cố định, không lấy hết schema
 - Ẩn/hiện cột: UI (`ColumnPicker`) trên dữ liệu đã GET; không đổi `$select` khi tick. Tổng số con folder = `Folder.ItemCount` (`$expand=Folder`). Không `GetFolderByServerRelativeUrl` / `storagemetrics` / GET items chỉ để đếm
 
@@ -26,7 +28,7 @@ Items: `$select` đúng `listItemSelect(internalNames)` (không `*`); property `
 
 - Graph, PnPjs, CSOM, endpoint `/_api` không có trong doc Microsoft
 - Wrapper/helper “phòng khi dùng”, dead code, abstraction không có caller
-- POST/MERGE/DELETE trên REST hiện tại — thư viện **chỉ đọc**; ghi thì service mới + hỏi trước
+- POST/MERGE/DELETE ghi file/list — service mới + hỏi trước; **đọc quyền** (GET EffectiveBasePermissions) qua `PermissionService`
 - `fetch` SharePoint từ `packages/react`
 
 ```ts

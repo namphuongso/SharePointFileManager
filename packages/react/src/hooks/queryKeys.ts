@@ -20,4 +20,13 @@ export const queryKeys = {
     ] as const,
   fields: (siteId: string, library: string, locale: string) =>
     ["sp", siteId, library, locale, "fields"] as const,
+  folderCapabilities: (siteId: string, library: string, folderId: string) =>
+    ["sp", siteId, library, "capabilities", folderId] as const,
+  accessible: (
+    siteId: string,
+    library: string,
+    sortField = "",
+    sortDirection = "",
+    fields = "",
+  ) => ["sp", siteId, library, "accessible", sortField, sortDirection, fields] as const,
 };

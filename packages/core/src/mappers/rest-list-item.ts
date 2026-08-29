@@ -51,13 +51,14 @@ export function mapRestListItem(
     : (file?.Name ?? item.FileLeafRef ?? item.Title);
   if (!name || (folder && name === "Forms")) return undefined;
 
-  const uniqueId = folder ? folderObj?.UniqueId : file?.UniqueId;
-  const id = uniqueId ?? (typeof item.GUID === "string" ? item.GUID : undefined);
+  const uniqueId =
+    (typeof item.UniqueId === "string" ? item.UniqueId : undefined) ??
+    (folder ? folderObj?.UniqueId : file?.UniqueId);
 
   const base = mapRestItem(
     folder ? "folder" : "file",
     name,
-    requireUniqueId(id, folder ? "folder" : "file"),
+    requireUniqueId(uniqueId, folder ? "folder" : "file"),
     folder ? folderObj?.TimeLastModified : file?.TimeLastModified,
     folder ? undefined : toSize(file?.Length),
   );

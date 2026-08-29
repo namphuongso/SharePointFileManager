@@ -31,6 +31,7 @@ export function ColumnHeaderMenu({
   onSort,
   messages,
   className,
+  isSortable,
   extraGroups,
   width,
   minWidth,
@@ -50,6 +51,7 @@ export function ColumnHeaderMenu({
     typeAsString,
     sortDirection: direction,
     onSort: onSort ? (next) => onSort(field, next, typeAsString) : undefined,
+    isSortable,
     messages,
     extraGroups,
   });

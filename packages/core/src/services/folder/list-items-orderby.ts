@@ -73,6 +73,15 @@ export function isSortableLibraryField(
   return SORTABLE_TYPES.has(type);
 }
 
+/** Search sortlist: Name/Modified/Size + Author/Editor + kiểu nguyên thủy (giống browse). */
+export function isSortableSearchField(
+  internalName: string,
+  typeAsString?: string,
+): boolean {
+  if (internalName === "File_x0020_Size") return true;
+  return isSortableLibraryField(internalName, typeAsString);
+}
+
 /**
  * Folder trước, rồi cột user hoặc FileLeafRef — giống All Documents.
  * `typeAsString` phải từ field còn trên list (không computed/ghost); thiếu thì không sort person/custom.

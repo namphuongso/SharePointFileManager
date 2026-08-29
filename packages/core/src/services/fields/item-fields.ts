@@ -48,6 +48,7 @@ export function listItemSelect(internalNames: readonly string[]): string {
 
   return [
     "GUID",
+    "UniqueId",
     "FSObjType",
     "FileDirRef",
     ...selectedFields,

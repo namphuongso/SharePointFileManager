@@ -3,6 +3,8 @@ import { SharePointRestClient } from "./rest/client";
 import { FieldService } from "./services/fields";
 import { FolderService } from "./services/folder";
 import { resolveLibrary } from "./services/library";
+import { PermissionService } from "./services/permissions";
+import { SearchService } from "./services/search";
 import type {
   LibraryContext,
   ResolvedSharePointConfig,
@@ -11,14 +13,16 @@ import type {
 } from "./types/models";
 
 /**
- * Lớp ghép core: token + REST + cache thư viện + FolderService + FieldService.
- * UI không fetch trực tiếp — GET SharePoint đi qua this.rest / this.folders / this.fields.
+ * Lớp ghép core: token + REST + cache thư viện + Folder / Field / Permission / Search.
+ * UI không fetch trực tiếp — GET SharePoint đi qua this.rest / services.
  */
 export class SharePointClient {
   readonly config: ResolvedSharePointConfig;
   readonly rest: SharePointRestClient;
   readonly folders: FolderService;
   readonly fields: FieldService;
+  readonly permissions: PermissionService;
+  readonly search: SearchService;
 
   private libraryPromise?: Promise<LibraryContext>;
 
@@ -33,6 +37,8 @@ export class SharePointClient {
     });
     this.fields = new FieldService(this.rest, () => this.getLibrary(), this.config.locale);
     this.folders = new FolderService(this.rest, () => this.getLibrary(), this.fields);
+    this.permissions = new PermissionService(this.rest, () => this.getLibrary());
+    this.search = new SearchService(this.rest, () => this.getLibrary());
   }
 
   get tokenProvider(): TokenProvider {

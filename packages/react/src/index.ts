@@ -9,6 +9,9 @@ export { sharePointLightTheme, sharePointDarkTheme } from "./fluent/theme";
 export { useSharePoint } from "./provider/context";
 export { SharePointFileManager } from "./components/file-manager/SharePointFileManager";
 export { useFolderChildren } from "./hooks/useFolderChildren";
+export { useAccessibleItems } from "./hooks/useAccessibleItems";
+export { useFolderViewCapabilities } from "./hooks/useFolderViewCapabilities";
+export type { FolderViewAccess } from "./hooks/useFolderViewCapabilities";
 export { useLibraryFields } from "./hooks/useLibraryFields";
 export { getErrorMessage } from "./hooks/getErrorMessage";
 
@@ -22,6 +25,10 @@ export {
   isSharePointError,
   FIXED_LIBRARY_FIELD_NAMES,
   isSortableLibraryField,
+  isSortableSearchField,
+  PermissionKind,
+  hasPermissionKind,
+  toItemCapabilities,
 } from "@namphuongso/sharepoint-file-manager-core";
 
 export type {
@@ -34,8 +41,11 @@ export type {
   SharePointItem,
   SharePointField,
   FolderChildrenPage,
+  SearchAccessiblePage,
   ListChildrenSort,
   ListSortDirection,
+  ItemCapabilities,
+  EffectiveBasePermissionsDto,
 } from "@namphuongso/sharepoint-file-manager-core";
 
 export type {
