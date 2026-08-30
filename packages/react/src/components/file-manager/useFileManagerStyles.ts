@@ -206,6 +206,13 @@ export const useFileManagerStyles = makeStyles({
   rowFolder: {
     cursor: "pointer",
   },
+  /** Dòng file bấm được — cùng pointer như folder, hover nhấn nền rõ hơn. */
+  rowFile: {
+    cursor: "pointer",
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground1Hover,
+    },
+  },
   cell: {
     height: "48px",
     paddingTop: "0",

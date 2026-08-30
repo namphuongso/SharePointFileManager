@@ -10,6 +10,8 @@ import {
   BreadcrumbDivider,
   BreadcrumbItem,
   Button,
+  MessageBar,
+  MessageBarBody,
   mergeClasses,
 } from "@fluentui/react-components";
 import {
@@ -26,6 +28,7 @@ import { useFolderChildren } from "../../hooks/useFolderChildren";
 import { useFolderViewCapabilities } from "../../hooks/useFolderViewCapabilities";
 import { useLoadMoreOnScroll } from "../../hooks/useLoadMoreOnScroll";
 import { useLibraryFields } from "../../hooks/useLibraryFields";
+import { useOpenItem } from "../../hooks/useOpenItem";
 import { useVisibleExtraColumns } from "../../hooks/useVisibleExtraColumns";
 import { fieldLabel } from "../../i18n/messages";
 import type { BreadcrumbCrumb, FileBrowserProps, FileListColumn } from "../../types";
@@ -136,6 +139,29 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     Boolean(hasNextPage),
     isFetchingNextPage,
     loadMore,
+  );
+
+  const [openFileState, setOpenFileState] = useState<{
+    kind: "denied" | "error";
+    message?: string;
+  }>();
+  const { openItem } = useOpenItem();
+  const onOpenFile = useCallback(
+    (item: SharePointItem) => {
+      void openItem(item).then((result) => {
+        if (result.status === "opened") {
+          // 2 pha: mở trước (được coi như user gesture), lỗi thì hiển thị banner.
+          window.open(result.url, "_blank", "noopener,noreferrer");
+          return;
+        }
+        if (result.status === "denied") {
+          setOpenFileState({ kind: "denied" });
+          return;
+        }
+        setOpenFileState({ kind: "error", message: result.message });
+      });
+    },
+    [openItem],
   );
 
   const extraColumns = useMemo(
@@ -343,6 +369,21 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
         />
       ) : null}
 
+      {openFileState ? (
+        openFileState.kind === "denied" ? (
+          <MessageBar intent="warning" className={styles.errorBanner}>
+            <MessageBarBody>
+              {messages.noOpenPermission} — {messages.noOpenPermissionHint}
+            </MessageBarBody>
+          </MessageBar>
+        ) : (
+          <ErrorBanner
+            message={`${messages.openFileError}: ${openFileState.message ?? messages.unknownError}`}
+            retryLabel={messages.refresh}
+          />
+        )
+      ) : null}
+
       <div className={styles.listCard}>
         <div ref={rootRef} className={styles.listPane}>
           {listLoading ? <LibrarySkeleton /> : null}
@@ -360,6 +401,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
               locale={locale}
               messages={messages}
               onOpenFolder={openFolder}
+              onOpenFile={onOpenFile}
               columns={columns}
               columnWidths={widths}
               onColumnResize={onResize}

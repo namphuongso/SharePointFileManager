@@ -43,6 +43,8 @@ export interface FileListProps {
   locale: string;
   messages: Messages;
   onOpenFolder: (item: SharePointItem) => void;
+  /** Bấm dòng file — mở preview (?web=1) qua useOpenItem; bỏ trống để chỉ đọc. */
+  onOpenFile?: (item: SharePointItem) => void;
   columns: FileListColumn[];
   columnWidths: Record<string, number>;
   onColumnResize: (field: string, width: number) => void;

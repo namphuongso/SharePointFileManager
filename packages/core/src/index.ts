@@ -13,6 +13,7 @@ export { mapStatusToCode } from "./errors/map-status-to-code";
 
 export { FolderService, isSortableLibraryField, isSortableSearchField } from "./services/folder";
 export { FieldService, FIXED_LIBRARY_FIELD_NAMES } from "./services/fields";
+export { FileService } from "./services/files";
 export { PermissionService, hasPermissionKind, toItemCapabilities } from "./services/permissions";
 export { SearchService } from "./services/search";
 export { resolveLibrary } from "./services/library";

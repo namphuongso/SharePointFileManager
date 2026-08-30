@@ -8,6 +8,13 @@ export interface Messages {
   /** Không có ViewListItems trên folder hiện tại. */
   noViewPermission: string;
   noViewPermissionHint: string;
+  /** Không có OpenItems trên file đang bấm. */
+  noOpenPermission: string;
+  noOpenPermissionHint: string;
+  /** Lỗi GET URL mở file (không phải 403). */
+  openFileError: string;
+  /** aria-label / title dòng file — gợi ý bấm để mở. */
+  openFile: string;
   retry: string;
   refresh: string;
   loadMore: string;

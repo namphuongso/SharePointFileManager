@@ -33,6 +33,7 @@ export function FileList({
   locale,
   messages,
   onOpenFolder,
+  onOpenFile,
   columns,
   columnWidths,
   onColumnResize,
@@ -136,6 +137,7 @@ export function FileList({
               locale={locale}
               messages={messages}
               onOpenFolder={onOpenFolder}
+              onOpenFile={onOpenFile}
               columns={columns}
             />
           ))}
@@ -150,17 +152,20 @@ type FileRowProps = {
   locale: string;
   messages: FileListProps["messages"];
   onOpenFolder: FileListProps["onOpenFolder"];
+  onOpenFile?: (item: SharePointItem) => void;
   columns: FileListColumn[];
 };
 
-function FileRow({ item, locale, messages, onOpenFolder, columns }: FileRowProps) {
+function FileRow({ item, locale, messages, onOpenFolder, onOpenFile, columns }: FileRowProps) {
   const styles = useFileManagerStyles();
   const folder = item.type === "folder";
+  const file = item.type === "file";
 
   return (
     <TableRow
-      className={mergeClasses(styles.row, folder && styles.rowFolder)}
-      onClick={() => folder && onOpenFolder(item)}
+      className={mergeClasses(styles.row, folder && styles.rowFolder, file && styles.rowFile)}
+      onClick={() => (folder ? onOpenFolder(item) : file && onOpenFile?.(item))}
+      title={file ? messages.openFile : undefined}
     >
       {columns.map((col) => (
         <TableCell

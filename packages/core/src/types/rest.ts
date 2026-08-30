@@ -33,6 +33,11 @@ export interface RestFolder {
   TimeLastModified?: string;
 }
 
+/** JSON SP.File — $select ServerRelativeUrl (mở file ?web=1). */
+export interface RestFileUrl {
+  ServerRelativeUrl?: string;
+}
+
 export interface RestList {
   Id?: string;
   Title?: string;

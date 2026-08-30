@@ -1,6 +1,7 @@
 import { resolveConfig } from "./config/resolve-config";
 import { SharePointRestClient } from "./rest/client";
 import { FieldService } from "./services/fields";
+import { FileService } from "./services/files";
 import { FolderService } from "./services/folder";
 import { resolveLibrary } from "./services/library";
 import { PermissionService } from "./services/permissions";
@@ -21,6 +22,7 @@ export class SharePointClient {
   readonly rest: SharePointRestClient;
   readonly folders: FolderService;
   readonly fields: FieldService;
+  readonly files: FileService;
   readonly permissions: PermissionService;
   readonly search: SearchService;
 
@@ -37,6 +39,7 @@ export class SharePointClient {
     });
     this.fields = new FieldService(this.rest, () => this.getLibrary(), this.config.locale);
     this.folders = new FolderService(this.rest, () => this.getLibrary(), this.fields);
+    this.files = new FileService(this.rest, () => this.getLibrary());
     this.permissions = new PermissionService(this.rest, () => this.getLibrary());
     this.search = new SearchService(this.rest, () => this.getLibrary());
   }
