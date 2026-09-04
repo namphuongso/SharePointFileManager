@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FluentProvider } from "@fluentui/react-components";
 import { SharePointClient } from "@namphuongso/sharepoint-file-manager-core";
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { isDarkTheme } from "../fluent/isDarkTheme";
 import { sharePointDarkTheme, sharePointLightTheme } from "../fluent/theme";
 import { getMessages } from "../i18n/messages";
+import { ToastViewport } from "../notify";
+import type { NotifyApi } from "../notify";
 import type { SharePointProviderProps } from "../types";
 import { SharePointContext } from "./context";
 
@@ -82,6 +84,32 @@ export function SharePointProvider({
   const resolvedMessages = getMessages(activeLocale, messages);
   const isDark = isDarkTheme(theme);
 
+  /**
+   * API toast — `ToastViewport` gọi `onReady` khi controller sẵn sàng.
+   * Giữ trong ref để dispatch an toàn kể cả khi hook bắn toast đồng bộ trong commit đầu
+   * (trước effect mount Toaster). Context trả cùng một object qua useMemo.
+   */
+  const notifyRef = useRef<NotifyApi>({
+    success: () => {},
+    info: () => "",
+    error: () => {},
+    update: () => {},
+    dismiss: () => {},
+  });
+  const notify = useMemo<NotifyApi>(
+    () => ({
+      success: (title, subtitle) => notifyRef.current.success(title, subtitle),
+      info: (title, subtitle) => notifyRef.current.info(title, subtitle),
+      error: (title, subtitle) => notifyRef.current.error(title, subtitle),
+      update: (id, options) => notifyRef.current.update(id, options),
+      dismiss: (id) => notifyRef.current.dismiss(id),
+    }),
+    [],
+  );
+  const handleToastReady = useCallback((api: NotifyApi) => {
+    notifyRef.current = api;
+  }, []);
+
   return (
     <QueryClientProvider client={resolvedClient}>
       <FluentProvider
@@ -105,9 +133,11 @@ export function SharePointProvider({
               setRuntimeLocale({ source: locale, value: locale });
             },
             messages: resolvedMessages,
+            notify,
           }}
         >
           {children}
+          <ToastViewport onReady={handleToastReady} />
         </SharePointContext.Provider>
       </FluentProvider>
     </QueryClientProvider>

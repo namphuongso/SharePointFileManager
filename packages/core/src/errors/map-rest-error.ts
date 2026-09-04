@@ -12,7 +12,19 @@ const REST_CODE_MAP: Record<string, SharePointErrorCode> = {
   "-2147024894, System.IO.FileNotFoundException": ErrorCodes.NotFound,
   itemNotFound: ErrorCodes.NotFound,
   "-2130575257, Microsoft.SharePoint.SPException": ErrorCodes.Conflict,
+  /** File/folder trùng tên (một số tenant trả mã Win32). */
+  "-2147024713, Microsoft.SharePoint.SPException": ErrorCodes.Conflict,
 };
+
+function looksLikeConflict(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("already exists") ||
+    m.includes("already in use") ||
+    m.includes("name is already") ||
+    m.includes("đã tồn tại")
+  );
+}
 
 /** JSON lỗi REST → SharePointError (mã, message, Retry-After). */
 export function mapRestError(input: MapRestErrorInput): SharePointError {
@@ -24,7 +36,10 @@ export function mapRestError(input: MapRestErrorInput): SharePointError {
     input.fallbackMessage ??
     `SharePoint REST request failed with status ${input.status}`;
   const restCode = err?.code;
-  const code = (restCode && REST_CODE_MAP[restCode]) || mapStatusToCode(input.status);
+  const code =
+    (restCode && REST_CODE_MAP[restCode]) ||
+    (looksLikeConflict(message) ? ErrorCodes.Conflict : undefined) ||
+    mapStatusToCode(input.status);
 
   return new SharePointError({
     code,

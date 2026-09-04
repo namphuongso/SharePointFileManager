@@ -77,3 +77,17 @@ export interface LibraryContext {
   rootFolderUniqueId: string;
   entityTypeName?: string;
 }
+
+/** Tùy chọn POST tạo thư mục con. */
+export interface CreateFolderOptions {
+  signal?: AbortSignal;
+}
+
+/** Tùy chọn POST upload file vào folder. */
+export interface UploadFileOptions {
+  /** Tên file trên SharePoint — mặc định File.name nếu content là File. */
+  fileName?: string;
+  /** Ghi đè khi trùng tên — mặc định false. */
+  overwrite?: boolean;
+  signal?: AbortSignal;
+}

@@ -1,5 +1,6 @@
 export { normalizeSiteUrl } from "./site-url";
 export { escapeODataLiteral } from "./odata";
+export { encodeODataQuotedValue, encodeServerRelativePathArg, normalizeGuid } from "./odata-path-arg";
 export { normalizeApiPath, buildApiUrl } from "./api-url";
 export { buildRestUrl } from "./build-url";
 export { readErrorBody, parseSuccessBody } from "./parse-body";
@@ -9,3 +10,5 @@ export { requireUniqueId } from "./require-unique-id";
 export { parseODataCollection } from "./parse-odata-collection";
 export { resolveODataNextLink } from "./resolve-odata-next-link";
 export { mapRestItem } from "./map-rest-item";
+export { assertValidItemName } from "./validate-item-name";
+export { resolveParentFolderUniqueId } from "./resolve-parent-folder-id";

@@ -12,6 +12,10 @@ import { parseODataCollection, resolveODataNextLink } from "../../utils";
 import { selectableItemFieldNames } from "../fields/item-fields";
 import { listItemsOrderby } from "./list-items-orderby";
 import { DEFAULT_LIST_PAGE_SIZE, listItemsPath, listItemsQuery } from "./list-items-query";
+import {
+  resolveFolderBreadcrumb,
+  type FolderBreadcrumbSegment,
+} from "./resolve-folder-breadcrumb";
 import { resolveFolderUrl } from "./resolve-folder-url";
 
 /** Ghost $select: loại cột rồi thử lại, tối đa 3 lần GET. */
@@ -30,6 +34,17 @@ export class FolderService {
     private readonly getLibrary: () => Promise<LibraryContext>,
     private readonly fields: FieldService,
   ) {}
+
+  /**
+   * UniqueId → breadcrumb dưới root (hydrate ?folder= sau F5).
+   * Root → [].
+   */
+  async resolveBreadcrumb(
+    folderId: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<FolderBreadcrumbSegment[]> {
+    return resolveFolderBreadcrumb(this.rest, this.getLibrary, folderId, options.signal);
+  }
 
   async listChildren(
     folderId: string,

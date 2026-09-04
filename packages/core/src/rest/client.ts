@@ -12,8 +12,8 @@ import {
 } from "../utils";
 
 /**
- * Client REST SharePoint — chỉ GET (duyệt danh sách).
- * 401: lấy token mới một lần. 429: chờ rồi thử lại tối đa 3 lần.
+ * Client REST SharePoint — GET (duyệt) + POST (tạo folder / upload, Bearer OAuth).
+ * OAuth: không cần X-RequestDigest. 401: token mới một lần. 429: chờ rồi thử ≤ 3 lần.
  * @see https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service
  */
 export class SharePointRestClient {
@@ -39,6 +39,11 @@ export class SharePointRestClient {
     return this.request<T>({ ...options, path: "", absoluteUrl: url, method: "GET" });
   }
 
+  /** POST ghi (tạo folder, upload file, …). Body do caller truyền — không stringify trong client. */
+  async post<T>(path: string, options: Omit<RestRequestOptions, "path" | "method"> = {}): Promise<T> {
+    return this.request<T>({ ...options, path, method: "POST" });
+  }
+
   async request<T>(options: RestRequestOptions): Promise<T> {
     const fetchImpl = this.options.fetchImpl ?? fetch;
     const method = options.method ?? "GET";
@@ -62,7 +67,12 @@ export class SharePointRestClient {
 
       let response: Response;
       try {
-        response = await fetchImpl(url, { method, headers, signal: options.signal });
+        response = await fetchImpl(url, {
+          method,
+          headers,
+          body: options.body ?? undefined,
+          signal: options.signal,
+        });
       } catch (error) {
         throwIfCancelled(options.signal, error);
         throw new SharePointError({

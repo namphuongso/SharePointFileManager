@@ -67,6 +67,30 @@ export const useFileManagerStyles = makeStyles({
     color: tokens.colorNeutralForeground1,
     backgroundColor: tokens.colorNeutralBackground1,
   },
+  /** Nút refresh đang fetch — icon xoay 1 vòng / 0.9s, vô tận đến khi xong. */
+  commandIconButtonSpinning: {
+    "@keyframes spfmRefreshSpin": {
+      from: { transform: "rotate(0deg)" },
+      to: { transform: "rotate(360deg)" },
+    },
+    "svg": {
+      animationName: "spfmRefreshSpin",
+      animationDuration: "0.9s",
+      animationTimingFunction: "linear",
+      animationIterationCount: "infinite",
+    },
+  },
+  /** input file — opacity/off-screen; tránh display:none / clip / z-index âm (chặn picker). */
+  visuallyHiddenInput: {
+    position: "fixed",
+    left: "-9999px",
+    top: "0",
+    width: "1px",
+    height: "1px",
+    opacity: 0,
+    overflow: "hidden",
+    pointerEvents: "none",
+  },
   listCard: {
     flex: 1,
     minHeight: "0",
@@ -418,6 +442,54 @@ export const useFileManagerStyles = makeStyles({
     boxShadow: "none",
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground1Hover,
+    },
+  },
+  /** Skeleton list khi đang fetch: fade-in từng dòng + shimmer chạy ngang. */
+  skeletonWrap: {
+    paddingTop: "8px",
+    paddingBottom: "8px",
+    paddingLeft: "12px",
+    paddingRight: "12px",
+  },
+  skeletonRow: {
+    display: "grid",
+    gridTemplateColumns: "20px minmax(0, 2fr) 120px 88px 160px",
+    columnGap: "12px",
+    alignItems: "center",
+    height: "48px",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    "@keyframes spfmSkeletonFadeIn": {
+      from: { opacity: 0, transform: "translateY(2px)" },
+      to: { opacity: 1, transform: "translateY(0)" },
+    },
+    animationName: "spfmSkeletonFadeIn",
+    animationDuration: "0.25s",
+    animationTimingFunction: "ease-out",
+    animationFillMode: "both",
+  },
+  /** Stagger — mỗi dòng trễ thêm 50ms. Áp dụng qua inline style (--i index). */
+  skeletonStagger: {
+    /* delay do prop style={{ animationDelay }} truyền từ component. */
+  },
+  /** Shimmer: gradient ngang chạy vô tận trên nền skeleton. */
+  skeletonShimmer: {
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderRadius: tokens.borderRadiusSmall,
+    "@keyframes spfmShimmer": {
+      from: { transform: "translateX(-100%)" },
+      to: { transform: "translateX(100%)" },
+    },
+    "::after": {
+      content: '""',
+      position: "absolute",
+      inset: "0",
+      backgroundImage: `linear-gradient(90deg, transparent 0%, ${tokens.colorNeutralBackground5} 50%, transparent 100%)`,
+      animationName: "spfmShimmer",
+      animationDuration: "1.4s",
+      animationTimingFunction: "linear",
+      animationIterationCount: "infinite",
     },
   },
 });

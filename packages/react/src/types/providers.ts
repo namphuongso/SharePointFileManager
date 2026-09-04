@@ -7,6 +7,7 @@ import type {
   SharePointConfig,
   SharePointLibraryTarget,
 } from "@namphuongso/sharepoint-file-manager-core";
+import type { NotifyApi } from "../notify";
 import type { Messages } from "./messages";
 
 export interface SharePointProviderProps {
@@ -24,6 +25,8 @@ export interface SharePointContextValue {
   /** Đổi locale runtime cho menu ngôn ngữ tích hợp sẵn. */
   setLocale: (locale: string) => void;
   messages: Messages;
+  /** Toast thông báo giữa màn hình. */
+  notify: NotifyApi;
 }
 
 export interface SharePointAppProviderProps {

@@ -1,7 +1,9 @@
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type MouseEvent } from "react";
 import {
   FIXED_LIBRARY_FIELD_NAMES,
   isSortableSearchField,
+  NEW_DOCUMENT_KINDS,
+  type NewDocumentKind,
   type SharePointItem,
 } from "@namphuongso/sharepoint-file-manager-core";
 import {
@@ -24,21 +26,31 @@ import { getErrorMessage } from "../../hooks/getErrorMessage";
 import { useAccessibleItems } from "../../hooks/useAccessibleItems";
 import { useColumnLayout } from "../../hooks/useColumnLayout";
 import { useColumnSort } from "../../hooks/useColumnSort";
+import { useCreateDocument } from "../../hooks/useCreateDocument";
+import { useCreateFolder } from "../../hooks/useCreateFolder";
+import { useFileBrowserNavigation } from "../../hooks/useFileBrowserNavigation";
 import { useFolderChildren } from "../../hooks/useFolderChildren";
 import { useFolderViewCapabilities } from "../../hooks/useFolderViewCapabilities";
 import { useLoadMoreOnScroll } from "../../hooks/useLoadMoreOnScroll";
 import { useLibraryFields } from "../../hooks/useLibraryFields";
 import { useOpenItem } from "../../hooks/useOpenItem";
+import { useUploadFile } from "../../hooks/useUploadFile";
+import { useUploadFolder } from "../../hooks/useUploadFolder";
 import { useVisibleExtraColumns } from "../../hooks/useVisibleExtraColumns";
 import { fieldLabel } from "../../i18n/messages";
-import type { BreadcrumbCrumb, FileBrowserProps, FileListColumn } from "../../types";
+import type { FileBrowserProps, FileListColumn } from "../../types";
 import { ColumnPicker } from "./ColumnPicker";
+import { CreateDocumentDialog } from "./CreateDocumentDialog";
+import { CreateFolderDialog } from "./CreateFolderDialog";
 import { EmptyState } from "./EmptyState";
 import { ErrorBanner } from "./ErrorBanner";
 import { ForbiddenState } from "./ForbiddenState";
 import { FileList } from "./FileView";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { LibrarySkeleton } from "./LibrarySkeleton";
+import { ListContextMenu } from "./ListContextMenu";
+import type { NewItemAction } from "./newItemActions";
+import { NewItemToolbarMenu } from "./NewItemToolbarMenu";
 import { useFileManagerStyles } from "./useFileManagerStyles";
 
 /** ItemChildCount: hiện Folder.ItemCount. FolderChildCount không có số tách — không đưa picker. */
@@ -50,7 +62,19 @@ const HIDE_FROM_PICKER = new Set([
   "FileSize",
 ]);
 
-type BrowserView = "library" | "accessible";
+/** Mở OS picker đồng bộ trong user gesture (MenuItem onClick). */
+function openFilePicker(input: HTMLInputElement | null) {
+  if (!input) return;
+  try {
+    if (typeof input.showPicker === "function") {
+      void input.showPicker();
+      return;
+    }
+  } catch {
+    // showPicker bị chặn / không hỗ trợ → click().
+  }
+  input.click();
+}
 
 /**
  * Duyệt thư viện (browse) + tab Search REST (item user được xem).
@@ -60,10 +84,9 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
   const styles = useFileManagerStyles();
   const { client, locale, messages } = useSharePoint();
   const rootId = client.config.rootItemId;
-  const [view, setView] = useState<BrowserView>("library");
-  const [crumbs, setCrumbs] = useState<BreadcrumbCrumb[]>([
-    { id: rootId, name: title ?? messages.files },
-  ]);
+  const rootName = title ?? messages.files;
+  const { view, setView, crumbs, setCrumbs, navigate, locationReady } =
+    useFileBrowserNavigation(rootId, rootName);
   const currentFolderId = crumbs[crumbs.length - 1]?.id ?? rootId;
   const columnScope = `${client.config.siteId}:${client.cacheScope}`;
   const librarySort = useColumnSort(columnScope);
@@ -71,9 +94,9 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
   const isLibrary = view === "library";
   const { sort, onSort } = isLibrary ? librarySort : accessibleSort;
 
-  const viewAccess = useFolderViewCapabilities(currentFolderId);
+  const viewAccess = useFolderViewCapabilities(locationReady ? currentFolderId : undefined);
   const childrenQuery = useFolderChildren(currentFolderId, sort, {
-    enabled: isLibrary && viewAccess.isReady && viewAccess.canView,
+    enabled: isLibrary && locationReady && viewAccess.isReady && viewAccess.canView,
   });
   const fieldsQuery = useLibraryFields({
     enabled:
@@ -145,6 +168,31 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     kind: "denied" | "error";
     message?: string;
   }>();
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [folderDialogError, setFolderDialogError] = useState<string>();
+  const [documentKind, setDocumentKind] = useState<NewDocumentKind | null>(null);
+  const [documentDialogError, setDocumentDialogError] = useState<string>();
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const el = folderInputRef.current;
+    if (!el) return;
+    el.setAttribute("webkitdirectory", "");
+    el.setAttribute("directory", "");
+  }, []);
+
+  const createFolder = useCreateFolder(currentFolderId);
+  const createDocument = useCreateDocument(currentFolderId);
+  const uploadFile = useUploadFile(currentFolderId);
+  const uploadFolder = useUploadFolder(currentFolderId);
+  const canWrite = isLibrary && viewAccess.canView && viewAccess.canAdd;
+  const writeBusy =
+    createFolder.isPending ||
+    createDocument.isPending ||
+    uploadFile.isPending ||
+    uploadFolder.isPending;
   const { openItem } = useOpenItem();
   const onOpenFile = useCallback(
     (item: SharePointItem) => {
@@ -163,6 +211,97 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     },
     [openItem],
   );
+
+  const documentDefaultName = useMemo(() => {
+    if (!documentKind) return "";
+    const info = NEW_DOCUMENT_KINDS.find((k) => k.kind === documentKind);
+    return info?.defaultBaseName ?? "Document";
+  }, [documentKind]);
+
+  function handleNewAction(action: NewItemAction) {
+    if (!canWrite || writeBusy) return;
+    if (action.type === "folder") {
+      setFolderDialogError(undefined);
+      setFolderDialogOpen(true);
+      return;
+    }
+    if (action.type === "uploadFiles" || action.type === "uploadFolder") return;
+    setDocumentDialogError(undefined);
+    setDocumentKind(action.kind);
+  }
+
+  function handlePickFiles() {
+    if (!canWrite || writeBusy) return;
+    openFilePicker(fileInputRef.current);
+  }
+
+  function handlePickFolder() {
+    if (!canWrite || writeBusy) return;
+    openFilePicker(folderInputRef.current);
+  }
+
+  function handleListContextMenu(event: MouseEvent) {
+    if (!isLibrary || !viewAccess.canView) return;
+    // Chỉ nền khung / empty — chuột phải trên dòng đã stopPropagation trong FileRow.
+    const target = event.target as HTMLElement;
+    if (target.closest("[data-file-row]")) return;
+    event.preventDefault();
+    setContextMenu({ x: event.clientX, y: event.clientY });
+  }
+
+  async function handleCreateFolder(name: string) {
+    setFolderDialogError(undefined);
+    try {
+      await createFolder.mutateAsync(name);
+      setFolderDialogOpen(false);
+    } catch (error) {
+      // Lỗi validate (tên trống / trùng) hiện trong dialog; lỗi POST đã có toast từ hook.
+      setFolderDialogError(
+        error instanceof Error && error.message ? error.message : messages.createFolderError,
+      );
+    }
+  }
+
+  async function handleCreateDocument(values: { name: string }) {
+    if (!documentKind) return;
+    setDocumentDialogError(undefined);
+    try {
+      await createDocument.mutateAsync({
+        kind: documentKind,
+        name: values.name,
+      });
+      setDocumentKind(null);
+    } catch (error) {
+      setDocumentDialogError(
+        error instanceof Error && error.message ? error.message : messages.createDocumentError,
+      );
+    }
+  }
+
+  async function handleUploadChange(event: ChangeEvent<HTMLInputElement>) {
+    // FileList là live — copy trước khi reset value (reset làm length = 0).
+    const files = event.target.files ? [...event.target.files] : [];
+    event.target.value = "";
+    if (files.length === 0) return;
+    for (const file of files) {
+      try {
+        await uploadFile.mutateAsync({ file });
+      } catch {
+        // Lỗi đã có toast từ hook — không nuốt nhưng cũng không dừng cả batch.
+      }
+    }
+  }
+
+  async function handleFolderUploadChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files ? [...event.target.files] : [];
+    event.target.value = "";
+    if (files.length === 0) return;
+    try {
+      await uploadFolder.mutateAsync(files);
+    } catch {
+      // Lỗi đã có toast từ hook.
+    }
+  }
 
   const extraColumns = useMemo(
     () =>
@@ -225,18 +364,21 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
   function openFolder(item: SharePointItem) {
     if (item.type !== "folder") return;
     if (!isLibrary) {
-      // Folder từ Search → nhảy sang browse đúng UniqueId.
-      setView("library");
-      setCrumbs([
-        { id: rootId, name: title ?? messages.files },
-        { id: item.id, name: item.name },
-      ]);
+      // Folder từ Search → nhảy sang browse đúng UniqueId + URL.
+      navigate(
+        [
+          { id: rootId, name: rootName },
+          { id: item.id, name: item.name },
+        ],
+        "library",
+      );
       return;
     }
     setCrumbs((prev) => [...prev, { id: item.id, name: item.name }]);
   }
 
   function refreshAll() {
+    if (isRefreshing) return;
     if (isLibrary) {
       void viewAccess.refetch();
       void childrenQuery.refetch();
@@ -245,18 +387,33 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     void accessibleQuery.refetch();
   }
 
-  const listLoading = isLibrary
-    ? viewAccess.isLoading || (viewAccess.canView && childrenQuery.isPending)
-    : accessibleQuery.isPending;
+  /** Nút refresh đang quay khi bất kỳ query list nào fetching (cả lần đầu lẫn refetch). */
+  const isRefreshing = isLibrary
+    ? viewAccess.isFetching || childrenQuery.isFetching
+    : accessibleQuery.isFetching;
 
-  const showLibraryForbidden = isLibrary && !listLoading && viewAccess.viewDenied;
+  const listLoading =
+    !locationReady ||
+    (isLibrary
+      ? viewAccess.isLoading || (viewAccess.canView && childrenQuery.isPending)
+      : accessibleQuery.isPending);
+
+  /** Skeleton cũng hiện khi user bấm refresh (đã có data, đang refetch).
+   *  Lần đầu (chưa có data) đã được `listLoading` cover. */
+  const isRefetchingList = isLibrary
+    ? childrenQuery.isFetching && !childrenQuery.isPending
+    : accessibleQuery.isFetching && !accessibleQuery.isPending;
+  /** Loading tổng: lần đầu HOẶC đang refetch list — cả hai đều ưu tiên skeleton. */
+  const showSkeleton = listLoading || isRefetchingList;
+
+  const showLibraryForbidden = isLibrary && !showSkeleton && viewAccess.viewDenied;
   const showEmpty =
-    !listLoading &&
+    !showSkeleton &&
     !showLibraryForbidden &&
     items.length === 0 &&
     (isLibrary ? viewAccess.canView : !accessibleQuery.isError);
   const showList =
-    !listLoading &&
+    !showSkeleton &&
     !showLibraryForbidden &&
     items.length > 0 &&
     (isLibrary ? viewAccess.canView : true);
@@ -274,7 +431,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
                 isLibrary && styles.commandIconButtonActive,
               )}
               icon={<HomeRegular fontSize={20} />}
-              onClick={() => setView("library")}
+              onClick={() => navigate([{ id: rootId, name: rootName }], "library")}
               aria-label={messages.tabLibrary}
               title={messages.tabLibrary}
               aria-selected={isLibrary}
@@ -295,6 +452,35 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
               role="tab"
             />
           </div>
+
+          {isLibrary && viewAccess.canView ? (
+            <div className={styles.viewSwitch} role="group" aria-label={messages.newItem}>
+              <NewItemToolbarMenu
+                messages={messages}
+                disabled={!canWrite || writeBusy}
+                onAction={handleNewAction}
+                onPickFiles={handlePickFiles}
+                onPickFolder={handlePickFolder}
+              />
+            </div>
+          ) : null}
+
+          {/* Input luôn mount ngoài Menu — tránh unmount khi popover đóng. */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className={styles.visuallyHiddenInput}
+            tabIndex={-1}
+            onChange={(e) => void handleUploadChange(e)}
+          />
+          <input
+            ref={folderInputRef}
+            type="file"
+            className={styles.visuallyHiddenInput}
+            tabIndex={-1}
+            onChange={(e) => void handleFolderUploadChange(e)}
+          />
 
           {isLibrary ? (
             <Breadcrumb size="large">
@@ -336,9 +522,13 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
           <Button
             appearance="subtle"
             shape="circular"
-            className={styles.commandIconButton}
+            className={mergeClasses(
+              styles.commandIconButton,
+              isRefreshing && styles.commandIconButtonSpinning,
+            )}
             icon={<ArrowClockwiseRegular fontSize={20} />}
             onClick={refreshAll}
+            disabled={isRefreshing}
             aria-label={messages.refresh}
             title={messages.refresh}
           />
@@ -384,9 +574,49 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
         )
       ) : null}
 
+      <CreateFolderDialog
+        open={folderDialogOpen}
+        onOpenChange={setFolderDialogOpen}
+        onSubmit={handleCreateFolder}
+        messages={messages}
+        isPending={createFolder.isPending}
+        errorMessage={folderDialogError}
+      />
+
+      <CreateDocumentDialog
+        open={documentKind !== null}
+        kind={documentKind}
+        onOpenChange={(open) => {
+          if (!open) setDocumentKind(null);
+        }}
+        onSubmit={handleCreateDocument}
+        messages={messages}
+        defaultName={documentDefaultName}
+        isPending={createDocument.isPending}
+        errorMessage={documentDialogError}
+      />
+
+      <ListContextMenu
+        open={contextMenu !== null}
+        anchor={contextMenu}
+        onOpenChange={(open) => {
+          if (!open) setContextMenu(null);
+        }}
+        messages={messages}
+        disabled={!canWrite || writeBusy}
+        onAction={handleNewAction}
+        onPickFiles={handlePickFiles}
+        onPickFolder={handlePickFolder}
+        onRefresh={refreshAll}
+      />
+
       <div className={styles.listCard}>
-        <div ref={rootRef} className={styles.listPane}>
-          {listLoading ? <LibrarySkeleton /> : null}
+        <div
+          ref={rootRef}
+          className={styles.listPane}
+          onContextMenu={handleListContextMenu}
+        >
+          {showSkeleton ? <LibrarySkeleton /> : null}
           {showLibraryForbidden ? <ForbiddenState messages={messages} /> : null}
           {showEmpty ? (
             <EmptyState

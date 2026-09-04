@@ -164,7 +164,14 @@ function FileRow({ item, locale, messages, onOpenFolder, onOpenFile, columns }: 
   return (
     <TableRow
       className={mergeClasses(styles.row, folder && styles.rowFolder, file && styles.rowFile)}
+      data-file-row=""
       onClick={() => (folder ? onOpenFolder(item) : file && onOpenFile?.(item))}
+      onContextMenu={(event) => {
+        // Chuột phải trên dòng: không mở menu New — chỉ chặn menu mặc định.
+        // Menu New dành cho nền khung (ListContextMenu ở FileBrowser).
+        event.preventDefault();
+        event.stopPropagation();
+      }}
       title={file ? messages.openFile : undefined}
     >
       {columns.map((col) => (

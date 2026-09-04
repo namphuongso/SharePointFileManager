@@ -21,7 +21,7 @@ export async function resolveFolderUrl(
     return library.rootFolderServerRelativeUrl;
   }
 
-  const folder = await rest.get<RestFolder>(`web/GetFolderById('${itemId}')`, {
+  const folder = await rest.get<RestFolder>(`web/GetFolderById('${itemId.replace(/[{}]/g, "")}')`, {
     query: { $select: "ServerRelativeUrl" },
     signal,
   });

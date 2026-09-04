@@ -11,10 +11,46 @@ export interface Messages {
   /** Không có OpenItems trên file đang bấm. */
   noOpenPermission: string;
   noOpenPermissionHint: string;
+  /** Không có AddListItems trên folder hiện tại. */
+  noAddPermission: string;
   /** Lỗi GET URL mở file (không phải 403). */
   openFileError: string;
   /** aria-label / title dòng file — gợi ý bấm để mở. */
   openFile: string;
+  /** Nút / dialog tạo thư mục. */
+  newFolder: string;
+  folderName: string;
+  createFolder: string;
+  createFolderError: string;
+  /** Menu New (toolbar + chuột phải). */
+  newItem: string;
+  uploadFiles: string;
+  uploadFolder: string;
+  newWord: string;
+  newExcel: string;
+  newPowerPoint: string;
+  fileName: string;
+  createDocumentError: string;
+  /** Nút upload file. */
+  upload: string;
+  uploadError: string;
+  /** Đang POST upload (banner trạng thái). */
+  uploading: string;
+  /** Tên trùng khi tạo / upload (Conflict). */
+  nameConflict: string;
+  /** File quá lớn (413). */
+  fileTooLarge: string;
+  /** Tên không hợp lệ (ký tự cấm). */
+  invalidName: string;
+  /** Toast — upload 1 file xong. */
+  uploadSuccess: string;
+  /** Toast — upload cả thư mục xong. */
+  uploadFolderSuccess: string;
+  /** Toast — tạo thư mục xong. */
+  createFolderSuccess: string;
+  /** Toast — tạo file trống (Word/Excel/PowerPoint) xong. */
+  createDocumentSuccess: string;
+  cancel: string;
   retry: string;
   refresh: string;
   loadMore: string;

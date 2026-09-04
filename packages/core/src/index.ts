@@ -11,9 +11,21 @@ export type { SharePointErrorOptions } from "./types/errors";
 export { mapRestError } from "./errors/map-rest-error";
 export { mapStatusToCode } from "./errors/map-status-to-code";
 
-export { FolderService, isSortableLibraryField, isSortableSearchField } from "./services/folder";
+export {
+  FolderService,
+  isSortableLibraryField,
+  isSortableSearchField,
+} from "./services/folder";
+export type { FolderBreadcrumbSegment } from "./services/folder";
 export { FieldService, FIXED_LIBRARY_FIELD_NAMES } from "./services/fields";
 export { FileService } from "./services/files";
+export { CreateFolderService } from "./services/create-folder";
+export {
+  CreateDocumentService,
+  NEW_DOCUMENT_KINDS,
+  ensureDocumentFileName,
+} from "./services/create-document";
+export { UploadFileService } from "./services/upload";
 export { PermissionService, hasPermissionKind, toItemCapabilities } from "./services/permissions";
 export { SearchService } from "./services/search";
 export { resolveLibrary } from "./services/library";
@@ -31,7 +43,14 @@ export type {
   SharePointField,
   FolderChildrenPage,
   LibraryContext,
+  CreateFolderOptions,
+  UploadFileOptions,
 } from "./types/models";
+export type {
+  NewDocumentKind,
+  CreateDocumentOptions,
+  NewDocumentKindInfo,
+} from "./types/create-document";
 export type { ListChildrenSort, ListSortDirection } from "./types/rest";
 export { PermissionKind } from "./types/permissions";
 export type {

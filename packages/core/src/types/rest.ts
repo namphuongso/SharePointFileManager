@@ -7,6 +7,8 @@ export interface RestRequestOptions {
   method?: string;
   query?: Record<string, string | number | boolean | undefined>;
   headers?: Record<string, string>;
+  /** Body POST — Blob/ArrayBuffer cho upload; JSON string cho ghi metadata. Client không stringify. */
+  body?: BodyInit | null;
   signal?: AbortSignal;
 }
 

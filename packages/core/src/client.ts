@@ -1,11 +1,14 @@
 import { resolveConfig } from "./config/resolve-config";
 import { SharePointRestClient } from "./rest/client";
+import { CreateDocumentService } from "./services/create-document";
+import { CreateFolderService } from "./services/create-folder";
 import { FieldService } from "./services/fields";
 import { FileService } from "./services/files";
 import { FolderService } from "./services/folder";
 import { resolveLibrary } from "./services/library";
 import { PermissionService } from "./services/permissions";
 import { SearchService } from "./services/search";
+import { UploadFileService } from "./services/upload";
 import type {
   LibraryContext,
   ResolvedSharePointConfig,
@@ -14,8 +17,8 @@ import type {
 } from "./types/models";
 
 /**
- * Lớp ghép core: token + REST + cache thư viện + Folder / Field / Permission / Search.
- * UI không fetch trực tiếp — GET SharePoint đi qua this.rest / services.
+ * Lớp ghép core: token + REST + cache thư viện + Folder / Field / Permission / Search / ghi.
+ * UI không fetch trực tiếp — SharePoint đi qua this.rest / services.
  */
 export class SharePointClient {
   readonly config: ResolvedSharePointConfig;
@@ -23,6 +26,9 @@ export class SharePointClient {
   readonly folders: FolderService;
   readonly fields: FieldService;
   readonly files: FileService;
+  readonly folderCreate: CreateFolderService;
+  readonly documentCreate: CreateDocumentService;
+  readonly fileUpload: UploadFileService;
   readonly permissions: PermissionService;
   readonly search: SearchService;
 
@@ -40,6 +46,9 @@ export class SharePointClient {
     this.fields = new FieldService(this.rest, () => this.getLibrary(), this.config.locale);
     this.folders = new FolderService(this.rest, () => this.getLibrary(), this.fields);
     this.files = new FileService(this.rest, () => this.getLibrary());
+    this.folderCreate = new CreateFolderService(this.rest, () => this.getLibrary());
+    this.documentCreate = new CreateDocumentService(this.rest, () => this.getLibrary());
+    this.fileUpload = new UploadFileService(this.rest, () => this.getLibrary());
     this.permissions = new PermissionService(this.rest, () => this.getLibrary());
     this.search = new SearchService(this.rest, () => this.getLibrary());
   }

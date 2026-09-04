@@ -13,7 +13,15 @@ export { useAccessibleItems } from "./hooks/useAccessibleItems";
 export { useFolderViewCapabilities } from "./hooks/useFolderViewCapabilities";
 export type { FolderViewAccess } from "./hooks/useFolderViewCapabilities";
 export { useLibraryFields } from "./hooks/useLibraryFields";
+export { useCreateFolder } from "./hooks/useCreateFolder";
+export { useCreateDocument } from "./hooks/useCreateDocument";
+export { useUploadFile } from "./hooks/useUploadFile";
+export type { UploadFileInput } from "./hooks/useUploadFile";
+export { useUploadFolder } from "./hooks/useUploadFolder";
 export { getErrorMessage } from "./hooks/getErrorMessage";
+
+/** Toast thông báo giữa màn hình — dùng qua `useSharePoint().notify`. */
+export type { NotifyApi } from "./notify";
 
 export {
   SharePointClient,
@@ -46,7 +54,14 @@ export type {
   ListSortDirection,
   ItemCapabilities,
   EffectiveBasePermissionsDto,
+  CreateFolderOptions,
+  UploadFileOptions,
+  NewDocumentKind,
+  CreateDocumentOptions,
+  NewDocumentKindInfo,
 } from "@namphuongso/sharepoint-file-manager-core";
+
+export { NEW_DOCUMENT_KINDS } from "@namphuongso/sharepoint-file-manager-core";
 
 export type {
   Messages,
