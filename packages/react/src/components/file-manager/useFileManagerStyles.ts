@@ -61,6 +61,7 @@ export const useFileManagerStyles = makeStyles({
     width: "32px",
     height: "32px",
     maxWidth: "32px",
+    padding: "0",
     color: tokens.colorNeutralForeground2,
   },
   commandIconButtonActive: {
