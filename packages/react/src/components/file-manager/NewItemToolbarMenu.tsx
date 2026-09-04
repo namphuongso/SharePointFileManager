@@ -40,7 +40,7 @@ export function NewItemToolbarMenu({
           icon={<AddRegular fontSize={20} />}
           disabled={disabled}
           aria-label={messages.newItem}
-          title={disabled ? messages.noAddPermission : messages.newItem}
+          title={messages.newItem}
         />
       </MenuTrigger>
       <MenuPopover>

@@ -18,8 +18,10 @@ export interface ListContextMenuProps {
   anchor: { x: number; y: number } | null;
   onOpenChange: (open: boolean) => void;
   messages: Messages;
-  /** Khoá submenu Mới khi không có quyền thêm / đang ghi. */
-  disabled?: boolean;
+  /** Hiện submenu Mới khi có AddListItems. */
+  canAdd?: boolean;
+  /** Đang ghi — khoá mục Mới tạm thời. */
+  writeBusy?: boolean;
   onAction: (action: NewItemAction) => void;
   onPickFiles: () => void;
   onPickFolder: () => void;
@@ -28,14 +30,15 @@ export interface ListContextMenuProps {
 }
 
 /**
- * Menu chuột phải trên vùng danh sách — Mới (submenu) + Làm mới.
+ * Menu chuột phải trên vùng danh sách — Mới (nếu có quyền) + Làm mới.
  */
 export function ListContextMenu({
   open,
   anchor,
   onOpenChange,
   messages,
-  disabled,
+  canAdd,
+  writeBusy,
   onAction,
   onPickFiles,
   onPickFolder,
@@ -66,27 +69,27 @@ export function ListContextMenu({
     >
       <MenuPopover>
         <MenuList>
-          <Menu>
-            <MenuTrigger disableButtonEnhancement>
-              <MenuItem
-                icon={<AddRegular />}
-                disabled={disabled}
-                title={disabled ? messages.noAddPermission : undefined}
-              >
-                {messages.newItem}
-              </MenuItem>
-            </MenuTrigger>
-            <MenuPopover>
-              <NewItemMenuList
-                messages={messages}
-                disabled={disabled}
-                onPickFiles={() => closeAfter(onPickFiles)}
-                onPickFolder={() => closeAfter(onPickFolder)}
-                onAction={(action) => closeAfter(() => onAction(action))}
-              />
-            </MenuPopover>
-          </Menu>
-          <MenuDivider />
+          {canAdd ? (
+            <>
+              <Menu>
+                <MenuTrigger disableButtonEnhancement>
+                  <MenuItem icon={<AddRegular />} disabled={writeBusy}>
+                    {messages.newItem}
+                  </MenuItem>
+                </MenuTrigger>
+                <MenuPopover>
+                  <NewItemMenuList
+                    messages={messages}
+                    disabled={writeBusy}
+                    onPickFiles={() => closeAfter(onPickFiles)}
+                    onPickFolder={() => closeAfter(onPickFolder)}
+                    onAction={(action) => closeAfter(() => onAction(action))}
+                  />
+                </MenuPopover>
+              </Menu>
+              <MenuDivider />
+            </>
+          ) : null}
           <MenuItem
             icon={<ArrowClockwiseRegular />}
             onClick={() => closeAfter(onRefresh)}

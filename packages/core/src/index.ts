@@ -19,6 +19,13 @@ export {
 export type { FolderBreadcrumbSegment } from "./services/folder";
 export { FieldService, FIXED_LIBRARY_FIELD_NAMES } from "./services/fields";
 export { FileService } from "./services/files";
+export type {
+  DownloadFileResult,
+  DownloadFolderOptions,
+  FolderZipPhase,
+  FolderZipProgress,
+  OpenFileOptions,
+} from "./services/files";
 export { CreateFolderService } from "./services/create-folder";
 export {
   CreateDocumentService,

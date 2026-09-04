@@ -9,6 +9,11 @@ export interface RestRequestOptions {
   headers?: Record<string, string>;
   /** Body POST — Blob/ArrayBuffer cho upload; JSON string cho ghi metadata. Client không stringify. */
   body?: BodyInit | null;
+  /**
+   * `blob` = body nhị phân (`/$value`, OpenBinaryStream) — không parse JSON/text.
+   * Mặc định JSON/text (odata=nometadata).
+   */
+  responseType?: "json" | "blob";
   signal?: AbortSignal;
 }
 

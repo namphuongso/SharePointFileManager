@@ -14,6 +14,7 @@ import { defaultColumnWidth, fitColumnWidths, minColumnWidth } from "../../utils
 import { formatBytes, formatDate, formatItemCount } from "../../utils/format";
 import { ColumnHeaderMenu } from "./ColumnHeaderMenu";
 import { FileTypeIcon } from "./FileTypeIcon";
+import { ItemMoreMenu } from "./ItemMoreMenu";
 import { useFileManagerStyles } from "./useFileManagerStyles";
 
 /** Tổng số con trực tiếp — Folder.ItemCount, không $select computed ItemChildCount. */
@@ -34,6 +35,9 @@ export function FileList({
   messages,
   onOpenFolder,
   onOpenFile,
+  onDownloadFile,
+  onItemContextMenu,
+  itemActionBusy,
   columns,
   columnWidths,
   onColumnResize,
@@ -138,6 +142,9 @@ export function FileList({
               messages={messages}
               onOpenFolder={onOpenFolder}
               onOpenFile={onOpenFile}
+              onDownloadFile={onDownloadFile}
+              onItemContextMenu={onItemContextMenu}
+              itemActionBusy={itemActionBusy}
               columns={columns}
             />
           ))}
@@ -153,36 +160,76 @@ type FileRowProps = {
   messages: FileListProps["messages"];
   onOpenFolder: FileListProps["onOpenFolder"];
   onOpenFile?: (item: SharePointItem) => void;
+  onDownloadFile?: (item: SharePointItem) => void;
+  onItemContextMenu?: (item: SharePointItem, position: { x: number; y: number }) => void;
+  itemActionBusy?: boolean;
   columns: FileListColumn[];
 };
 
-function FileRow({ item, locale, messages, onOpenFolder, onOpenFile, columns }: FileRowProps) {
+function FileRow({
+  item,
+  locale,
+  messages,
+  onOpenFolder,
+  onOpenFile,
+  onDownloadFile,
+  onItemContextMenu,
+  itemActionBusy,
+  columns,
+}: FileRowProps) {
   const styles = useFileManagerStyles();
+  const [hovered, setHovered] = useState(false);
   const folder = item.type === "folder";
   const file = item.type === "file";
+
+  function handleOpenFromMenu(target: SharePointItem) {
+    if (target.type === "folder") onOpenFolder(target);
+    else onOpenFile?.(target);
+  }
 
   return (
     <TableRow
       className={mergeClasses(styles.row, folder && styles.rowFolder, file && styles.rowFile)}
       data-file-row=""
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={() => (folder ? onOpenFolder(item) : file && onOpenFile?.(item))}
       onContextMenu={(event) => {
-        // Chuột phải trên dòng: không mở menu New — chỉ chặn menu mặc định.
-        // Menu New dành cho nền khung (ListContextMenu ở FileBrowser).
+        // Chuột phải trên dòng: không bubble lên ListContextMenu (New).
         event.preventDefault();
         event.stopPropagation();
+        onItemContextMenu?.(item, { x: event.clientX, y: event.clientY });
       }}
       title={file ? messages.openFile : undefined}
     >
-      {columns.map((col) => (
-        <TableCell
-          key={col.internalName}
-          className={mergeClasses(styles.cell, cellClass(styles, col.kind))}
-          style={{ minWidth: minColumnWidth(col.internalName) }}
-        >
-          {renderColumnCell(item, col, locale, messages, styles)}
-        </TableCell>
-      ))}
+      {columns.map((col, index) => {
+        const content = renderColumnCell(item, col, locale, messages, styles);
+        // Cột đầu tiên theo thứ tự hiển thị hiện tại — không phụ thuộc kind=name.
+        const isFirstColumn = index === 0;
+        return (
+          <TableCell
+            key={col.internalName}
+            className={mergeClasses(styles.cell, cellClass(styles, col.kind))}
+            style={{ minWidth: minColumnWidth(col.internalName) }}
+          >
+            {isFirstColumn ? (
+              <div className={styles.firstColumnInner}>
+                <div className={styles.firstColumnContent}>{content}</div>
+                <ItemMoreMenu
+                  item={item}
+                  messages={messages}
+                  visible={hovered}
+                  busy={itemActionBusy}
+                  onOpen={handleOpenFromMenu}
+                  onDownload={(target) => onDownloadFile?.(target)}
+                />
+              </div>
+            ) : (
+              content
+            )}
+          </TableCell>
+        );
+      })}
     </TableRow>
   );
 }

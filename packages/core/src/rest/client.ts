@@ -12,7 +12,7 @@ import {
 } from "../utils";
 
 /**
- * Client REST SharePoint — GET (duyệt) + POST (tạo folder / upload, Bearer OAuth).
+ * Client REST SharePoint — GET (duyệt / tải nhị phân) + POST (tạo folder / upload, Bearer OAuth).
  * OAuth: không cần X-RequestDigest. 401: token mới một lần. 429: chờ rồi thử ≤ 3 lần.
  * @see https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service
  */
@@ -39,6 +39,17 @@ export class SharePointRestClient {
     return this.request<T>({ ...options, path: "", absoluteUrl: url, method: "GET" });
   }
 
+  /**
+   * GET nội dung nhị phân (vd. `GetFileById(...)/$value`).
+   * Không dùng `get` — `parseSuccessBody` đọc text sẽ hỏng binary.
+   */
+  async getBlob(
+    path: string,
+    options: Omit<RestRequestOptions, "path" | "method" | "responseType"> = {},
+  ): Promise<Blob> {
+    return this.request<Blob>({ ...options, path, method: "GET", responseType: "blob" });
+  }
+
   /** POST ghi (tạo folder, upload file, …). Body do caller truyền — không stringify trong client. */
   async post<T>(path: string, options: Omit<RestRequestOptions, "path" | "method"> = {}): Promise<T> {
     return this.request<T>({ ...options, path, method: "POST" });
@@ -47,6 +58,7 @@ export class SharePointRestClient {
   async request<T>(options: RestRequestOptions): Promise<T> {
     const fetchImpl = this.options.fetchImpl ?? fetch;
     const method = options.method ?? "GET";
+    const asBlob = options.responseType === "blob";
     let unauthorizedRetried = false;
     let throttleAttempt = 0;
 
@@ -56,7 +68,10 @@ export class SharePointRestClient {
       const url = buildRestUrl((path) => this.apiUrl(path), options);
       const headers = new Headers(options.headers);
       if (!headers.has("Accept")) {
-        headers.set("Accept", "application/json;odata=nometadata");
+        headers.set(
+          "Accept",
+          asBlob ? "application/octet-stream" : "application/json;odata=nometadata",
+        );
       }
 
       const token = await this.options.tokenProvider.getAccessToken({
@@ -102,6 +117,9 @@ export class SharePointRestClient {
         });
       }
 
+      if (asBlob) {
+        return (await response.blob()) as T;
+      }
       return parseSuccessBody<T>(response);
     }
   }

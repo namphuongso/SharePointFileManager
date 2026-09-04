@@ -22,6 +22,13 @@ export const queryKeys = {
     ["sp", siteId, library, locale, "fields"] as const,
   folderCapabilities: (siteId: string, library: string, folderId: string) =>
     ["sp", siteId, library, "capabilities", folderId] as const,
+  /** Quyền một item (file/folder UniqueId) — lazy khi mở menu ⋯ / chuột phải. */
+  itemCapabilities: (
+    siteId: string,
+    library: string,
+    itemType: string,
+    itemId: string,
+  ) => ["sp", siteId, library, "itemCapabilities", itemType, itemId] as const,
   accessible: (
     siteId: string,
     library: string,

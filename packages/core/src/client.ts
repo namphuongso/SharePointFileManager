@@ -45,7 +45,7 @@ export class SharePointClient {
     });
     this.fields = new FieldService(this.rest, () => this.getLibrary(), this.config.locale);
     this.folders = new FolderService(this.rest, () => this.getLibrary(), this.fields);
-    this.files = new FileService(this.rest, () => this.getLibrary());
+    this.files = new FileService(this.rest, () => this.getLibrary(), this.folders);
     this.folderCreate = new CreateFolderService(this.rest, () => this.getLibrary());
     this.documentCreate = new CreateDocumentService(this.rest, () => this.getLibrary());
     this.fileUpload = new UploadFileService(this.rest, () => this.getLibrary());

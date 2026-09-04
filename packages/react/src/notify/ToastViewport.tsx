@@ -16,10 +16,12 @@ import {
 import { useToastStyles } from "./toastStyles";
 import type { NotifyApi } from "./types";
 
-/** Auto-dismiss mặc định — thành công 3s, lỗi 6s (user có thể bấm đóng). */
+/** Auto-dismiss mặc định — thành công 3s, lỗi 6s; tiến trình không tự tắt. */
 const TIMEOUT_SUCCESS = 3000;
 const TIMEOUT_INFO = 3000;
 const TIMEOUT_ERROR = 6000;
+const TIMEOUT_STICKY = -1;
+
 /** Số toast tối đa hiển thị đồng thời — bảng bên dưới không bị đầy. */
 const TOAST_LIMIT = 5;
 
@@ -132,6 +134,28 @@ export function ToastViewport({ onReady }: ToastViewportProps): ReactNode {
         );
         return id;
       },
+      progress: (title, subtitle) => {
+        const id = makeToastId(toasterId);
+        const icon = <Info24Filled />;
+        dispatchToast(
+          <ToastCard
+            intent="info"
+            title={title}
+            subtitle={subtitle}
+            icon={icon}
+            toastId={id}
+            onClose={(tid) => dismissRef.current(tid)}
+          />,
+          {
+            toastId: id,
+            intent: "info",
+            position: TOAST_POSITION,
+            timeout: TIMEOUT_STICKY,
+            pauseOnHover: true,
+          },
+        );
+        return id;
+      },
       error: (title, subtitle) => {
         const id = makeToastId(toasterId);
         const icon = <ErrorCircle24Filled />;
@@ -163,7 +187,13 @@ export function ToastViewport({ onReady }: ToastViewportProps): ReactNode {
           ) : (
             <Info24Filled />
           );
-        const timeout = options.intent === "error" ? TIMEOUT_ERROR : TIMEOUT_SUCCESS;
+        // info = vẫn đang xử lý → sticky; success/error → auto-dismiss.
+        const timeout =
+          options.intent === "error"
+            ? TIMEOUT_ERROR
+            : options.intent === "success"
+              ? TIMEOUT_SUCCESS
+              : TIMEOUT_STICKY;
         updateRef.current({
           toastId: id,
           intent: options.intent,

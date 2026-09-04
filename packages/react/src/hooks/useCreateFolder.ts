@@ -16,7 +16,7 @@ export function useCreateFolder(parentFolderId: string) {
     mutationFn: (name: string): Promise<SharePointItem> =>
       client.folderCreate.create(parentFolderId, name),
     onMutate: (name) => {
-      const toastId = notify.info(messages.uploading, name);
+      const toastId = notify.progress(messages.uploading, name);
       return { toastId };
     },
     onSuccess: (_item, name, context) => {

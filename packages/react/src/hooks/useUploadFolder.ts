@@ -41,7 +41,7 @@ export function useUploadFolder(parentFolderId: string) {
       const topFolder = first
         ? (first.webkitRelativePath || first.name).split("/")[0] ?? ""
         : "";
-      const toastId = notify.info(messages.uploading, topFolder || undefined);
+      const toastId = notify.progress(messages.uploading, topFolder || undefined);
       return { toastId, topFolder };
     },
     onSuccess: (_data, _files, context) => {

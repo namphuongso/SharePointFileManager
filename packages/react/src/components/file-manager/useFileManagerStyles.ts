@@ -269,6 +269,39 @@ export const useFileManagerStyles = makeStyles({
     gap: "12px",
     minWidth: "0",
   },
+  /**
+   * Cột đầu tiên (theo thứ tự hiển thị hiện tại): nội dung + nút ⋯ cuối ô.
+   * Không gắn vào kind=name — vẫn đúng khi user kéo cột Name sang chỗ khác.
+   */
+  firstColumnInner: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    minWidth: "0",
+    width: "100%",
+  },
+  firstColumnContent: {
+    flex: "1",
+    minWidth: "0",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  /** Nút ⋯ — ẩn mặc định, hiện khi hover dòng / menu mở. */
+  rowMoreButton: {
+    flexShrink: 0,
+    minWidth: "32px",
+    width: "32px",
+    height: "32px",
+    maxWidth: "32px",
+    color: tokens.colorNeutralForeground2,
+    opacity: 0,
+    pointerEvents: "none",
+  },
+  rowMoreButtonVisible: {
+    opacity: 1,
+    pointerEvents: "auto",
+  },
   nameText: {
     overflow: "hidden",
     textOverflow: "ellipsis",

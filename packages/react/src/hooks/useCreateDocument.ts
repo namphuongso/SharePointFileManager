@@ -28,7 +28,7 @@ export function useCreateDocument(parentFolderId: string) {
       return client.documentCreate.create(parentFolderId, kind, options);
     },
     onMutate: ({ name }) => {
-      const toastId = notify.info(messages.uploading, name);
+      const toastId = notify.progress(messages.uploading, name);
       return { toastId };
     },
     onSuccess: (_item, { name }, context) => {

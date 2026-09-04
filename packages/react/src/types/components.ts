@@ -45,6 +45,12 @@ export interface FileListProps {
   onOpenFolder: (item: SharePointItem) => void;
   /** Bấm dòng file — mở preview (?web=1) qua useOpenItem; bỏ trống để chỉ đọc. */
   onOpenFile?: (item: SharePointItem) => void;
+  /** Tải xuống từ menu ⋯ / chuột phải. */
+  onDownloadFile?: (item: SharePointItem) => void;
+  /** Chuột phải trên dòng — menu Mở / Tải xuống; bỏ trống thì chỉ chặn menu mặc định. */
+  onItemContextMenu?: (item: SharePointItem, position: { x: number; y: number }) => void;
+  /** Đang mở / tải — khoá nút ⋯. */
+  itemActionBusy?: boolean;
   columns: FileListColumn[];
   columnWidths: Record<string, number>;
   onColumnResize: (field: string, width: number) => void;

@@ -92,6 +92,7 @@ export function SharePointProvider({
   const notifyRef = useRef<NotifyApi>({
     success: () => {},
     info: () => "",
+    progress: () => "",
     error: () => {},
     update: () => {},
     dismiss: () => {},
@@ -100,6 +101,7 @@ export function SharePointProvider({
     () => ({
       success: (title, subtitle) => notifyRef.current.success(title, subtitle),
       info: (title, subtitle) => notifyRef.current.info(title, subtitle),
+      progress: (title, subtitle) => notifyRef.current.progress(title, subtitle),
       error: (title, subtitle) => notifyRef.current.error(title, subtitle),
       update: (id, options) => notifyRef.current.update(id, options),
       dismiss: (id) => notifyRef.current.dismiss(id),

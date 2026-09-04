@@ -25,7 +25,7 @@ export function useUploadFile(parentFolderId: string) {
         overwrite,
       }),
     onMutate: ({ file }) => {
-      const toastId = notify.info(messages.uploading, file.name);
+      const toastId = notify.progress(messages.uploading, file.name);
       return { toastId };
     },
     onSuccess: (_item, { file }, context) => {

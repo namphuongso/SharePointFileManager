@@ -34,6 +34,7 @@ import { useFolderViewCapabilities } from "../../hooks/useFolderViewCapabilities
 import { useLoadMoreOnScroll } from "../../hooks/useLoadMoreOnScroll";
 import { useLibraryFields } from "../../hooks/useLibraryFields";
 import { useOpenItem } from "../../hooks/useOpenItem";
+import { useDownloadItem } from "../../hooks/useDownloadItem";
 import { useUploadFile } from "../../hooks/useUploadFile";
 import { useUploadFolder } from "../../hooks/useUploadFolder";
 import { useVisibleExtraColumns } from "../../hooks/useVisibleExtraColumns";
@@ -46,6 +47,7 @@ import { EmptyState } from "./EmptyState";
 import { ErrorBanner } from "./ErrorBanner";
 import { ForbiddenState } from "./ForbiddenState";
 import { FileList } from "./FileView";
+import { ItemContextMenu } from "./ItemContextMenu";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { LibrarySkeleton } from "./LibrarySkeleton";
 import { ListContextMenu } from "./ListContextMenu";
@@ -164,8 +166,9 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     loadMore,
   );
 
-  const [openFileState, setOpenFileState] = useState<{
+  const [fileActionState, setFileActionState] = useState<{
     kind: "denied" | "error";
+    action: "open" | "download";
     message?: string;
   }>();
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
@@ -173,6 +176,11 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
   const [documentKind, setDocumentKind] = useState<NewDocumentKind | null>(null);
   const [documentDialogError, setDocumentDialogError] = useState<string>();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [itemMenu, setItemMenu] = useState<{
+    item: SharePointItem;
+    x: number;
+    y: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -193,9 +201,13 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     createDocument.isPending ||
     uploadFile.isPending ||
     uploadFolder.isPending;
-  const { openItem } = useOpenItem();
+  const { openItem, openingId } = useOpenItem();
+  const { downloadItem, downloadingId } = useDownloadItem();
+  const itemActionBusy = Boolean(openingId || downloadingId);
+
   const onOpenFile = useCallback(
     (item: SharePointItem) => {
+      setFileActionState(undefined);
       void openItem(item).then((result) => {
         if (result.status === "opened") {
           // 2 pha: mở trước (được coi như user gesture), lỗi thì hiển thị banner.
@@ -203,14 +215,32 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
           return;
         }
         if (result.status === "denied") {
-          setOpenFileState({ kind: "denied" });
+          setFileActionState({ kind: "denied", action: "open" });
           return;
         }
-        setOpenFileState({ kind: "error", message: result.message });
+        setFileActionState({ kind: "error", action: "open", message: result.message });
       });
     },
     [openItem],
   );
+
+  const onDownloadFile = useCallback(
+    (item: SharePointItem) => {
+      setFileActionState(undefined);
+      void downloadItem(item).then((result) => {
+        // Toast đã báo success/error; banner chỉ khi thiếu OpenItems.
+        if (result.status === "denied") {
+          setFileActionState({ kind: "denied", action: "download" });
+        }
+      });
+    },
+    [downloadItem],
+  );
+
+  const onItemContextMenu = useCallback((item: SharePointItem, position: { x: number; y: number }) => {
+    setContextMenu(null);
+    setItemMenu({ item, ...position });
+  }, []);
 
   const documentDefaultName = useMemo(() => {
     if (!documentKind) return "";
@@ -246,6 +276,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     const target = event.target as HTMLElement;
     if (target.closest("[data-file-row]")) return;
     event.preventDefault();
+    setItemMenu(null);
     setContextMenu({ x: event.clientX, y: event.clientY });
   }
 
@@ -453,11 +484,11 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
             />
           </div>
 
-          {isLibrary && viewAccess.canView ? (
+          {isLibrary && viewAccess.canView && canWrite ? (
             <div className={styles.viewSwitch} role="group" aria-label={messages.newItem}>
               <NewItemToolbarMenu
                 messages={messages}
-                disabled={!canWrite || writeBusy}
+                disabled={writeBusy}
                 onAction={handleNewAction}
                 onPickFiles={handlePickFiles}
                 onPickFolder={handlePickFolder}
@@ -559,8 +590,8 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
         />
       ) : null}
 
-      {openFileState ? (
-        openFileState.kind === "denied" ? (
+      {fileActionState ? (
+        fileActionState.kind === "denied" ? (
           <MessageBar intent="warning" className={styles.errorBanner}>
             <MessageBarBody>
               {messages.noOpenPermission} — {messages.noOpenPermissionHint}
@@ -568,7 +599,9 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
           </MessageBar>
         ) : (
           <ErrorBanner
-            message={`${messages.openFileError}: ${openFileState.message ?? messages.unknownError}`}
+            message={`${
+              fileActionState.action === "download" ? messages.downloadError : messages.openFileError
+            }: ${fileActionState.message ?? messages.unknownError}`}
             retryLabel={messages.refresh}
           />
         )
@@ -603,11 +636,28 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
           if (!open) setContextMenu(null);
         }}
         messages={messages}
-        disabled={!canWrite || writeBusy}
+        canAdd={canWrite}
+        writeBusy={writeBusy}
         onAction={handleNewAction}
         onPickFiles={handlePickFiles}
         onPickFolder={handlePickFolder}
         onRefresh={refreshAll}
+      />
+
+      <ItemContextMenu
+        open={itemMenu !== null}
+        anchor={itemMenu ? { x: itemMenu.x, y: itemMenu.y } : null}
+        item={itemMenu?.item ?? null}
+        onOpenChange={(open) => {
+          if (!open) setItemMenu(null);
+        }}
+        messages={messages}
+        busy={itemActionBusy}
+        onOpen={(item) => {
+          if (item.type === "folder") openFolder(item);
+          else onOpenFile(item);
+        }}
+        onDownload={onDownloadFile}
       />
 
       <div className={styles.listCard}>
@@ -632,6 +682,9 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
               messages={messages}
               onOpenFolder={openFolder}
               onOpenFile={onOpenFile}
+              onDownloadFile={onDownloadFile}
+              onItemContextMenu={onItemContextMenu}
+              itemActionBusy={itemActionBusy}
               columns={columns}
               columnWidths={widths}
               onColumnResize={onResize}
