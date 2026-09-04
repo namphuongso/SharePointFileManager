@@ -83,6 +83,11 @@ export interface CreateFolderOptions {
   signal?: AbortSignal;
 }
 
+/** Tùy chọn POST soft-delete (recycle) file/folder. */
+export interface DeleteItemOptions {
+  signal?: AbortSignal;
+}
+
 /** Tùy chọn POST upload file vào folder. */
 export interface UploadFileOptions {
   /** Tên file trên SharePoint — mặc định File.name nếu content là File. */

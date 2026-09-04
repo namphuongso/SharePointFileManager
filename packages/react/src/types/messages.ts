@@ -13,6 +13,8 @@ export interface Messages {
   noOpenPermissionHint: string;
   /** Không có AddListItems trên folder hiện tại. */
   noAddPermission: string;
+  /** Không có DeleteListItems trên item đang xóa. */
+  noDeletePermission: string;
   /** Lỗi GET URL mở file (không phải 403). */
   openFileError: string;
   /** aria-label / title dòng file — gợi ý bấm để mở. */
@@ -35,6 +37,22 @@ export interface Messages {
   downloadSuccess: string;
   /** Lỗi tải nhị phân (không phải 403). */
   downloadError: string;
+  /** Menu / nút xóa file hoặc folder. */
+  delete: string;
+  /** Nút xác nhận xóa file. */
+  deleteFile: string;
+  /** Nút xác nhận xóa folder. */
+  deleteFolder: string;
+  /** Tiêu đề dialog xác nhận xóa. */
+  deleteConfirmTitle: string;
+  /** Nội dung dialog — `{name}` = tên item. */
+  deleteConfirmBody: string;
+  /** Toast — đang soft-delete. */
+  deleting: string;
+  /** Toast — xóa xong. */
+  deleteSuccess: string;
+  /** Lỗi xóa (không phải 403). */
+  deleteError: string;
   /** Nút / dialog tạo thư mục. */
   newFolder: string;
   folderName: string;

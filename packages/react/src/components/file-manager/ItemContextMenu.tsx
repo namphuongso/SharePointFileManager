@@ -18,10 +18,11 @@ export interface ItemContextMenuProps {
   busy?: boolean;
   onOpen: (item: SharePointItem) => void;
   onDownload: (item: SharePointItem) => void;
+  onDelete: (item: SharePointItem) => void;
 }
 
 /**
- * Menu chuột phải trên dòng: Mở + Tải xuống (folder → zip).
+ * Menu chuột phải trên dòng: Mở + Tải xuống + Xóa.
  * Quyền lazy khi menu mở (useItemOpenCapability).
  */
 export function ItemContextMenu({
@@ -33,6 +34,7 @@ export function ItemContextMenu({
   busy,
   onOpen,
   onDownload,
+  onDelete,
 }: ItemContextMenuProps): ReactElement | null {
   if (!anchor || !item) return null;
 
@@ -65,6 +67,7 @@ export function ItemContextMenu({
           busy={busy}
           onOpen={() => closeAfter(() => onOpen(item))}
           onDownload={() => closeAfter(() => onDownload(item))}
+          onDelete={() => closeAfter(() => onDelete(item))}
         />
       </MenuPopover>
     </Menu>

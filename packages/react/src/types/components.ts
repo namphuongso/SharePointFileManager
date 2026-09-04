@@ -47,9 +47,11 @@ export interface FileListProps {
   onOpenFile?: (item: SharePointItem) => void;
   /** Tải xuống từ menu ⋯ / chuột phải. */
   onDownloadFile?: (item: SharePointItem) => void;
-  /** Chuột phải trên dòng — menu Mở / Tải xuống; bỏ trống thì chỉ chặn menu mặc định. */
+  /** Mở dialog xác nhận xóa từ menu ⋯ / chuột phải. */
+  onDeleteFile?: (item: SharePointItem) => void;
+  /** Chuột phải trên dòng — menu Mở / Tải xuống / Xóa; bỏ trống thì chỉ chặn menu mặc định. */
   onItemContextMenu?: (item: SharePointItem, position: { x: number; y: number }) => void;
-  /** Đang mở / tải — khoá nút ⋯. */
+  /** Đang mở / tải / xóa — khoá nút ⋯. */
   itemActionBusy?: boolean;
   columns: FileListColumn[];
   columnWidths: Record<string, number>;

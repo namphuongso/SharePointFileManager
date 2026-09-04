@@ -10,18 +10,31 @@ function toWord(value: string | number): bigint {
 }
 
 /**
- * Kiểm tra bit PermissionKind trên SP.BasePermissions — tương đương SP.BasePermissions.has().
- * kind < 32 → Low; kind ≥ 32 → High, bit (kind - 32).
+ * Kiểm tra bit PermissionKind trên SP.BasePermissions — khớp sp.js / PnP `hasPermissions`.
+ * Bit index = PermissionKind − 1 (ViewListItems=1 → bit 0 = giá trị 1).
+ * @see https://github.com/pnp/pnpjs/blob/main/packages/sp/security/funcs.ts
  */
 export function hasPermissionKind(
   permissions: EffectiveBasePermissionsDto,
   kind: PermissionKind,
 ): boolean {
+  if (kind === PermissionKind.EmptyMask) return true;
+  if (kind === PermissionKind.FullMask) {
+    const low = toWord(permissions.Low);
+    const high = toWord(permissions.High);
+    return (high & 32767n) === 32767n && low === 65535n;
+  }
+
+  const bitIndex = kind - 1;
   const low = toWord(permissions.Low);
   const high = toWord(permissions.High);
-  const word = kind < 32 ? low : high;
-  const bit = kind < 32 ? kind : kind - 32;
-  return (word & (1n << BigInt(bit))) !== 0n;
+  if (bitIndex >= 0 && bitIndex < 32) {
+    return (low & (1n << BigInt(bitIndex))) !== 0n;
+  }
+  if (bitIndex >= 32 && bitIndex < 64) {
+    return (high & (1n << BigInt(bitIndex - 32))) !== 0n;
+  }
+  return false;
 }
 
 /** Bitmask Microsoft → capability UX cho file manager. */

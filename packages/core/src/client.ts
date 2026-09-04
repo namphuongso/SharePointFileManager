@@ -2,6 +2,7 @@ import { resolveConfig } from "./config/resolve-config";
 import { SharePointRestClient } from "./rest/client";
 import { CreateDocumentService } from "./services/create-document";
 import { CreateFolderService } from "./services/create-folder";
+import { DeleteItemService } from "./services/delete";
 import { FieldService } from "./services/fields";
 import { FileService } from "./services/files";
 import { FolderService } from "./services/folder";
@@ -29,6 +30,7 @@ export class SharePointClient {
   readonly folderCreate: CreateFolderService;
   readonly documentCreate: CreateDocumentService;
   readonly fileUpload: UploadFileService;
+  readonly itemDelete: DeleteItemService;
   readonly permissions: PermissionService;
   readonly search: SearchService;
 
@@ -49,6 +51,7 @@ export class SharePointClient {
     this.folderCreate = new CreateFolderService(this.rest, () => this.getLibrary());
     this.documentCreate = new CreateDocumentService(this.rest, () => this.getLibrary());
     this.fileUpload = new UploadFileService(this.rest, () => this.getLibrary());
+    this.itemDelete = new DeleteItemService(this.rest, () => this.getLibrary());
     this.permissions = new PermissionService(this.rest, () => this.getLibrary());
     this.search = new SearchService(this.rest, () => this.getLibrary());
   }

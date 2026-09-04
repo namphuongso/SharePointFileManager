@@ -33,6 +33,7 @@ export {
   ensureDocumentFileName,
 } from "./services/create-document";
 export { UploadFileService } from "./services/upload";
+export { DeleteItemService } from "./services/delete";
 export { PermissionService, hasPermissionKind, toItemCapabilities } from "./services/permissions";
 export { SearchService } from "./services/search";
 export { resolveLibrary } from "./services/library";
@@ -51,6 +52,7 @@ export type {
   FolderChildrenPage,
   LibraryContext,
   CreateFolderOptions,
+  DeleteItemOptions,
   UploadFileOptions,
 } from "./types/models";
 export type {

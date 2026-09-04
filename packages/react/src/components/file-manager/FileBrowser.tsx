@@ -28,6 +28,7 @@ import { useColumnLayout } from "../../hooks/useColumnLayout";
 import { useColumnSort } from "../../hooks/useColumnSort";
 import { useCreateDocument } from "../../hooks/useCreateDocument";
 import { useCreateFolder } from "../../hooks/useCreateFolder";
+import { useDeleteItem, isDeleteDenied } from "../../hooks/useDeleteItem";
 import { useFileBrowserNavigation } from "../../hooks/useFileBrowserNavigation";
 import { useFolderChildren } from "../../hooks/useFolderChildren";
 import { useFolderViewCapabilities } from "../../hooks/useFolderViewCapabilities";
@@ -43,6 +44,7 @@ import type { FileBrowserProps, FileListColumn } from "../../types";
 import { ColumnPicker } from "./ColumnPicker";
 import { CreateDocumentDialog } from "./CreateDocumentDialog";
 import { CreateFolderDialog } from "./CreateFolderDialog";
+import { DeleteItemDialog } from "./DeleteItemDialog";
 import { EmptyState } from "./EmptyState";
 import { ErrorBanner } from "./ErrorBanner";
 import { ForbiddenState } from "./ForbiddenState";
@@ -168,13 +170,14 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
 
   const [fileActionState, setFileActionState] = useState<{
     kind: "denied" | "error";
-    action: "open" | "download";
+    action: "open" | "download" | "delete";
     message?: string;
   }>();
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [folderDialogError, setFolderDialogError] = useState<string>();
   const [documentKind, setDocumentKind] = useState<NewDocumentKind | null>(null);
   const [documentDialogError, setDocumentDialogError] = useState<string>();
+  const [deleteTarget, setDeleteTarget] = useState<SharePointItem | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [itemMenu, setItemMenu] = useState<{
     item: SharePointItem;
@@ -195,6 +198,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
   const createDocument = useCreateDocument(currentFolderId);
   const uploadFile = useUploadFile(currentFolderId);
   const uploadFolder = useUploadFolder(currentFolderId);
+  const deleteItem = useDeleteItem(currentFolderId);
   const canWrite = isLibrary && viewAccess.canView && viewAccess.canAdd;
   const writeBusy =
     createFolder.isPending ||
@@ -203,7 +207,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     uploadFolder.isPending;
   const { openItem, openingId } = useOpenItem();
   const { downloadItem, downloadingId } = useDownloadItem();
-  const itemActionBusy = Boolean(openingId || downloadingId);
+  const itemActionBusy = Boolean(openingId || downloadingId || deleteItem.isPending);
 
   const onOpenFile = useCallback(
     (item: SharePointItem) => {
@@ -236,6 +240,25 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
     },
     [downloadItem],
   );
+
+  const onDeleteRequest = useCallback((item: SharePointItem) => {
+    setFileActionState(undefined);
+    setDeleteTarget(item);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteItem.mutateAsync(deleteTarget);
+      setDeleteTarget(null);
+    } catch (error) {
+      if (isDeleteDenied(error)) {
+        setDeleteTarget(null);
+        setFileActionState({ kind: "denied", action: "delete" });
+      }
+      // Lỗi khác: toast đã báo; giữ dialog để user hủy hoặc thử lại.
+    }
+  }, [deleteItem, deleteTarget]);
 
   const onItemContextMenu = useCallback((item: SharePointItem, position: { x: number; y: number }) => {
     setContextMenu(null);
@@ -594,13 +617,19 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
         fileActionState.kind === "denied" ? (
           <MessageBar intent="warning" className={styles.errorBanner}>
             <MessageBarBody>
-              {messages.noOpenPermission} — {messages.noOpenPermissionHint}
+              {fileActionState.action === "delete"
+                ? messages.noDeletePermission
+                : `${messages.noOpenPermission} — ${messages.noOpenPermissionHint}`}
             </MessageBarBody>
           </MessageBar>
         ) : (
           <ErrorBanner
             message={`${
-              fileActionState.action === "download" ? messages.downloadError : messages.openFileError
+              fileActionState.action === "download"
+                ? messages.downloadError
+                : fileActionState.action === "delete"
+                  ? messages.deleteError
+                  : messages.openFileError
             }: ${fileActionState.message ?? messages.unknownError}`}
             retryLabel={messages.refresh}
           />
@@ -627,6 +656,17 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
         defaultName={documentDefaultName}
         isPending={createDocument.isPending}
         errorMessage={documentDialogError}
+      />
+
+      <DeleteItemDialog
+        open={deleteTarget !== null}
+        item={deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        messages={messages}
+        isPending={deleteItem.isPending}
       />
 
       <ListContextMenu
@@ -658,6 +698,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
           else onOpenFile(item);
         }}
         onDownload={onDownloadFile}
+        onDelete={onDeleteRequest}
       />
 
       <div className={styles.listCard}>
@@ -683,6 +724,7 @@ export function FileBrowser({ className, title, showLanguageSwitcher = true }: F
               onOpenFolder={openFolder}
               onOpenFile={onOpenFile}
               onDownloadFile={onDownloadFile}
+              onDeleteFile={onDeleteRequest}
               onItemContextMenu={onItemContextMenu}
               itemActionBusy={itemActionBusy}
               columns={columns}

@@ -7,13 +7,15 @@ import {
 import { useSharePoint } from "../provider/context";
 import { queryKeys } from "./queryKeys";
 
-/** Quyền mở / tải trên một item — lazy khi mở menu (không GET theo từng dòng list). */
+/** Quyền mở / tải / xóa trên một item — lazy khi mở menu (không GET theo từng dòng list). */
 export interface ItemOpenAccess {
   isLoading: boolean;
   /** OpenItems — mở file / tải file·folder. */
   canOpen: boolean;
   /** ViewListItems — mở (vào) folder. */
   canView: boolean;
+  /** DeleteListItems — soft-delete (recycle). */
+  canDelete: boolean;
 }
 
 /**
@@ -45,10 +47,12 @@ export function useItemOpenCapability(
 
   const canOpen = !forbidden && query.isSuccess && query.data.canOpen;
   const canView = !forbidden && query.isSuccess && query.data.canView;
+  const canDelete = !forbidden && query.isSuccess && query.data.canDelete;
 
   return {
     isLoading: Boolean(item) && enabled && query.isPending,
     canOpen,
     canView,
+    canDelete,
   };
 }

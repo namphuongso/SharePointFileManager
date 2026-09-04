@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
-import { MenuItem, MenuList } from "@fluentui/react-components";
-import { ArrowDownloadRegular, OpenRegular } from "@fluentui/react-icons";
+import { MenuDivider, MenuItem, MenuList } from "@fluentui/react-components";
+import { ArrowDownloadRegular, DeleteRegular, OpenRegular } from "@fluentui/react-icons";
 import type { SharePointItem } from "@namphuongso/sharepoint-file-manager-core";
 import { useItemOpenCapability } from "../../hooks/useItemOpenCapability";
 import type { Messages } from "../../types/messages";
@@ -13,10 +13,11 @@ export interface ItemActionsMenuListProps {
   busy?: boolean;
   onOpen: () => void;
   onDownload: () => void;
+  onDelete: () => void;
 }
 
 /**
- * Mục menu thao tác: Mở + Tải xuống.
+ * Mục menu thao tác: Mở + Tải xuống + Xóa.
  * Không đủ quyền → ẩn (không disabled). Đang GET quyền → danh sách trống tạm.
  */
 export function ItemActionsMenuList({
@@ -26,12 +27,15 @@ export function ItemActionsMenuList({
   busy,
   onOpen,
   onDownload,
+  onDelete,
 }: ItemActionsMenuListProps): ReactElement {
   const isFile = item.type === "file";
-  const { canOpen, canView, isLoading } = useItemOpenCapability(item, menuOpen);
+  const { canOpen, canView, canDelete, isLoading } = useItemOpenCapability(item, menuOpen);
 
   const showOpen = !isLoading && (isFile ? canOpen : canView);
   const showDownload = !isLoading && canOpen;
+  const showDelete = !isLoading && canDelete;
+  const showDivider = (showOpen || showDownload) && showDelete;
 
   return (
     <MenuList>
@@ -43,6 +47,12 @@ export function ItemActionsMenuList({
       {showDownload ? (
         <MenuItem icon={<ArrowDownloadRegular />} disabled={busy} onClick={onDownload}>
           {messages.download}
+        </MenuItem>
+      ) : null}
+      {showDivider ? <MenuDivider /> : null}
+      {showDelete ? (
+        <MenuItem icon={<DeleteRegular />} disabled={busy} onClick={onDelete}>
+          {messages.delete}
         </MenuItem>
       ) : null}
     </MenuList>

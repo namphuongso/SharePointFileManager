@@ -20,10 +20,11 @@ export interface ItemMoreMenuProps {
   busy?: boolean;
   onOpen: (item: SharePointItem) => void;
   onDownload: (item: SharePointItem) => void;
+  onDelete: (item: SharePointItem) => void;
 }
 
 /**
- * Nút ⋯ cuối cột đầu tiên — menu Mở / Tải xuống.
+ * Nút ⋯ cuối cột đầu tiên — menu Mở / Tải xuống / Xóa.
  * stopPropagation để không kích hoạt click mở dòng.
  */
 export function ItemMoreMenu({
@@ -33,6 +34,7 @@ export function ItemMoreMenu({
   busy,
   onOpen,
   onDownload,
+  onDelete,
 }: ItemMoreMenuProps): ReactElement {
   const styles = useFileManagerStyles();
   const [open, setOpen] = useState(false);
@@ -78,6 +80,10 @@ export function ItemMoreMenu({
           onDownload={() => {
             setOpen(false);
             onDownload(item);
+          }}
+          onDelete={() => {
+            setOpen(false);
+            onDelete(item);
           }}
         />
       </MenuPopover>

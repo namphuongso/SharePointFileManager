@@ -12,7 +12,7 @@ import {
 } from "../utils";
 
 /**
- * Client REST SharePoint — GET (duyệt / tải nhị phân) + POST (tạo folder / upload, Bearer OAuth).
+ * Client REST SharePoint — GET (duyệt / tải nhị phân) + POST (tạo / upload / recycle, Bearer OAuth).
  * OAuth: không cần X-RequestDigest. 401: token mới một lần. 429: chờ rồi thử ≤ 3 lần.
  * @see https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-service
  */

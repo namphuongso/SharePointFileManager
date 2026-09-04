@@ -18,6 +18,7 @@ export { useCreateDocument } from "./hooks/useCreateDocument";
 export { useUploadFile } from "./hooks/useUploadFile";
 export type { UploadFileInput } from "./hooks/useUploadFile";
 export { useUploadFolder } from "./hooks/useUploadFolder";
+export { useDeleteItem } from "./hooks/useDeleteItem";
 export { getErrorMessage } from "./hooks/getErrorMessage";
 
 /** Toast thông báo giữa màn hình — dùng qua `useSharePoint().notify`. */
@@ -55,6 +56,7 @@ export type {
   ItemCapabilities,
   EffectiveBasePermissionsDto,
   CreateFolderOptions,
+  DeleteItemOptions,
   UploadFileOptions,
   NewDocumentKind,
   CreateDocumentOptions,

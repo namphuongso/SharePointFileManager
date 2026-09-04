@@ -36,6 +36,7 @@ export function FileList({
   onOpenFolder,
   onOpenFile,
   onDownloadFile,
+  onDeleteFile,
   onItemContextMenu,
   itemActionBusy,
   columns,
@@ -143,6 +144,7 @@ export function FileList({
               onOpenFolder={onOpenFolder}
               onOpenFile={onOpenFile}
               onDownloadFile={onDownloadFile}
+              onDeleteFile={onDeleteFile}
               onItemContextMenu={onItemContextMenu}
               itemActionBusy={itemActionBusy}
               columns={columns}
@@ -161,6 +163,7 @@ type FileRowProps = {
   onOpenFolder: FileListProps["onOpenFolder"];
   onOpenFile?: (item: SharePointItem) => void;
   onDownloadFile?: (item: SharePointItem) => void;
+  onDeleteFile?: (item: SharePointItem) => void;
   onItemContextMenu?: (item: SharePointItem, position: { x: number; y: number }) => void;
   itemActionBusy?: boolean;
   columns: FileListColumn[];
@@ -173,6 +176,7 @@ function FileRow({
   onOpenFolder,
   onOpenFile,
   onDownloadFile,
+  onDeleteFile,
   onItemContextMenu,
   itemActionBusy,
   columns,
@@ -222,6 +226,7 @@ function FileRow({
                   busy={itemActionBusy}
                   onOpen={handleOpenFromMenu}
                   onDownload={(target) => onDownloadFile?.(target)}
+                  onDelete={(target) => onDeleteFile?.(target)}
                 />
               </div>
             ) : (
